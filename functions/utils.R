@@ -7,17 +7,17 @@ library(dplyr)
 # Not in operator
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
-# dframe<- data.table::fread('/Users/rafaelcatoia/Desktop/repos/phaeocystis/grump.phaeocystis_asv_long.csv') %>% 
+# Dframe<- data.table::fread('/Users/rafaelcatoia/Desktop/repos/phaeocystis/grump.phaeocystis_asv_long.csv') %>% 
 #  filter(Cruise!="MOSAiC" )
 
 # Create composition and filter two ASV with no abundance
-tidy_grump <- function(dframe,removeMOSAiC=T){
+tidy_grump <- function(Dframe,removeMOSAiC=T){
   
   ASVs_toRemove = c('GRUMP203261','GRUMP203863') #ASVs that had raw sequence counts equal to zero
-  dframe = dframe %>% filter(ASV_name%!in%ASVs_toRemove) # filtering those asvs
+  Dframe = Dframe %>% filter(ASV_name%!in%ASVs_toRemove) # filtering those asvs
   
-  idAsvs = unique(dframe$ASV_name) # listing all ASVs
-  idSamples = unique(dframe$SampleID) # listing all the sample names
+  idAsvs = unique(Dframe$ASV_name) # listing all ASVs
+  idSamples = unique(Dframe$SampleID) # listing all the sample names
   
   ## just creating new sample names to be easiear to plot.
   vetNumbers <- 1:length(idSamples)
@@ -25,15 +25,14 @@ tidy_grump <- function(dframe,removeMOSAiC=T){
                       ifelse(vetNumbers<100,paste('00',vetNumbers,sep=''),
                              ifelse(vetNumbers<1000,paste('0',vetNumbers,sep=''),paste(vetNumbers))))
   
-  SampleKeysNames = unique(paste(factor(dframe$SampleID,
+  SampleKeysNames = unique(paste(factor(Dframe$SampleID,
                                         labels = paste('S',SampleKeys,sep=''))))
   SampleKeysNames = SampleKeysNames[order(SampleKeysNames)]
-  dframe$SampleKey = paste(factor(dframe$SampleID,labels = paste('S',SampleKeys,sep='')))
-  dframe = dframe %>%  mutate(Species=ifelse(Species=='Phaeocystis_sp.',NA,Species))
+  Dframe$SampleKey = paste(factor(Dframe$SampleID,labels = paste('S',SampleKeys,sep='')))
   
-  ASVs_with_Species = dframe %>% filter(!is.na(Species)) %>% select(ASV_name,Species) %>% distinct()
-
-  dframe %>%  select(SampleKey,SampleID) %>% distinct()
+  Dframe = Dframe %>%  mutate(Species=ifelse(Species=='Phaeocystis_sp.',NA,Species))
+  
+  ASVs_with_Species = Dframe %>% filter(!is.na(Species)) %>% select(ASV_name,Species) %>% distinct()
   
   output = list(
     
@@ -41,10 +40,10 @@ tidy_grump <- function(dframe,removeMOSAiC=T){
     id_ASVs = idAsvs,
     
     ## Id with all SamplesId and sample names
-    id_Samples = dframe %>%  select(SampleKey,SampleID) %>% distinct(),
+    id_Samples = Dframe %>%  select(SampleKey,SampleID) %>% distinct(),
     
     ## ASV composition (composition on samples, transposing and than composition on asvs)
-    ASV_composition = dframe %>% #filter(is.na(Species)) %>% 
+    ASV_composition = Dframe %>% #filter(is.na(Species)) %>% 
       select(SampleKey,ASV_name,Raw.Sequence.Counts) %>% 
       pivot_wider(id_cols = c('SampleKey'),
                   values_from ='Raw.Sequence.Counts',
@@ -76,7 +75,9 @@ tidy_grump <- function(dframe,removeMOSAiC=T){
                   values_from = value,
                   names_from='SampleKey') %>% ## Wider again, ASVs in the row
       mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are the sample. The rows now add to 1.
-      arrange(name) %>% data.frame()"
+      arrange(name) %>% data.frame()",
+    
+    dframe = Dframe
   )
   
   return(output)

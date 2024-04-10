@@ -14,20 +14,101 @@ format:
     embed-resources: true
 ---
 
+
+::: panel-tabset
+
+# Data Handling
 ```{r}
-install.packages('rprojroot')
+library('dplyr') ; library('tidyr') ; 
+
 root <- rprojroot::has_file(".git/index")
 datadir = root$find_file("data")
 funsdir = root$find_file("functions")
 savingdir = root$find_file("saved_files")
 
+datapath = root$find_file(paste0(datadir,'/','grump.phaeocystis_asv_long.csv'))
 files_vec <- list.files(funsdir)
 
 for( i in 1:length(files_vec)){
-  source(root$find_file(files_vec[i]))
-
+  source(root$find_file(paste0(funsdir,'/',files_vec[i])))
 }
-source(root$find_file('))
 
+dframe = data.table::fread(input = datapath)
+
+dframe = tidy_grump(Dframe = dframe)
 ```
 
+# splitting inducer distance matrix
+
+The idea is to create a 'custom' distance matrix, to induce the grouppings.
+
+-   $c_1$ is within the same species - but no unassigned
+-   $c_2$ is between assigned species
+-   $c_3$ is between species and unassigned
+-   $c_4$ is within unassigned and unassigned
+
+![](InduceddistMatrix.png){width=25% fig-align="center"}
+
+For this document we will use only the following configuration:
+
+$c_1=1$, $c_2=1000$, $c_3=10$ , $c_4=10$
+
+A priori, the 'probability` of unassigned ASVs to agglomerate between themselves is the same as if it was to agglomerate with other species. Large $c_2$ makes it harder for known species ASVs to group between themselves.
+
+```{r}
+inducedDist = inducedDist(dFrame = dframe$dframe,
+                          c1 = 1,c2=1000,c3=10,c4=10,
+                          compMatrix = dframe$ASV_composition)
+
+inducedDist$myDist_checking
+```
+# Metrics
+
+::: panel-tabset
+
+## Proposed
+
+$$ S = \frac{numerator}{denominator} $$
+
+Where: 
+
+$$ numerator = \frac{1}{k} \left( \sum_{j=1}^{k}  \left[ \frac{1}{n_j}\sum_{i}^{n_j} d(x_i-\bar x^{(j)} ) \right]  \right) $$
+
+The mean average distance within clusters (each observation and the medoid of the cluster)
+
+$$ denominator = \frac{1}{\binom{k}{2}} \sum_{i \neq j }  d( \bar x^{(i)}-\bar x^{(j)} ) $$
+
+The average distance between clusters (each cluster is represented by it's medoid)
+
+## Permanova
+
+$$ S = \frac{numerator}{denominator} $$
+
+Where: 
+
+$$ SS_T = \frac{1}{N} \sum_{i=1}^{N-1}  \sum_{j=i+1}^{N-1} d^2_{ij} $$
+
+Being $d^2_{ij}$ is the squared distance between objects $i$ and $j$.
+
+
+$$ SS_W = \frac{1}{n} \sum_{i=1}^{N-1}  \sum_{j=i+1}^{N-1} d^2_{ij}\delta^2_{ij} $$
+
+$\delta^2_{ij}$ is an indicator function (1 if obs$i$ and $j$ are from the same cluster, 0 otherwise). $SS_A$ Then difference between the overall and the within groups sum-of-squares ($SS_{A}=SS_{T}-SS_{W}$).
+
+$$ F = \frac{\frac{SS_{A}}{p-1}}{\frac{SS_{W}}{N-p}} $$
+
+:::
+
+# Criando Clusters
+```{r}
+running=F
+
+## pure biotic factors = 
+list_with_clusters <- clusterize_ward_pam(
+  distMatrix = inducedDist$normalizedMyDist,
+  maxnclust = 50,
+  dFrameAsv = dframe$ASV_composition$name %>% unlist())
+```
+
+
+:::
