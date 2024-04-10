@@ -103,12 +103,56 @@ $$ F = \frac{\frac{SS_{A}}{p-1}}{\frac{SS_{W}}{N-p}} $$
 ```{r}
 running=F
 
-## pure biotic factors = 
-list_with_clusters <- clusterize_ward_pam(
-  distMatrix = inducedDist$normalizedMyDist,
-  maxnclust = 50,
-  dFrameAsv = dframe$ASV_composition$name %>% unlist())
+if(running){
+  ## pure biotic factors = 
+  list_with_clusters_alpha0 <- clusterize_ward_pam(
+    distMatrix = inducedDist$normalizedAitDist,
+    maxnclust = 50,
+    dFrameAsv = dframe$ASV_composition$name)
+  
+  alpha_=0.1
+  
+  distMatrix_ = alpha_*inducedDist$normalizedMyDist+(1-alpha_)*inducedDist$normalizedAitDist
+  
+  list_with_clusters_alpha0.10 <- clusterize_ward_pam(
+    distMatrix = distMatrix_,
+    maxnclust = 50,
+    dFrameAsv = dframe$ASV_composition$name)
+
+  alpha_=0.25
+  
+  distMatrix_ = alpha_*inducedDist$normalizedMyDist+(1-alpha_)*inducedDist$normalizedAitDist
+  
+  list_with_clusters_alpha0.25 <- clusterize_ward_pam(
+    distMatrix = distMatrix_,
+    maxnclust = 50,
+    dFrameAsv = dframe$ASV_composition$name)
+  
+  alpha_=0.5
+  
+  distMatrix_ = alpha_*inducedDist$normalizedMyDist+(1-alpha_)*inducedDist$normalizedAitDist
+  
+  list_with_clusters_alpha0.50 <- clusterize_ward_pam(
+    distMatrix = distMatrix_,
+    maxnclust = 50,
+    dFrameAsv = dframe$ASV_composition$name)
+  
+  saveRDS(object = list_with_clusters_alpha0,file = paste0(savingdir,'/','list_with_clusters_alpha0'))
+  saveRDS(object = list_with_clusters_alpha0.10,file = paste0(savingdir,'/','list_with_clusters_alpha0.10'))
+  saveRDS(object = list_with_clusters_alpha0.25,file = paste0(savingdir,'/','list_with_clusters_alpha0.25'))
+  saveRDS(object = list_with_clusters_alpha0.50,file = paste0(savingdir,'/','list_with_clusters_alpha0.50'))
+}
+
+list_with_clusters_alpha0 = readRDS(file = paste0(savingdir,'/','list_with_clusters_alpha0'))
+list_with_clusters_alpha0.10 = readRDS(file = paste0(savingdir,'/','list_with_clusters_alpha0.10'))
+list_with_clusters_alpha0.25 = readRDS(file = paste0(savingdir,'/','list_with_clusters_alpha0.25'))
+list_with_clusters_alpha0.50 = readRDS(file = paste0(savingdir,'/','list_with_clusters_alpha0.50'))
 ```
 
+# Calculating Metrics
+
+```{r}
+
+```
 
 :::

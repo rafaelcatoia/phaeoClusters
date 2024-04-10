@@ -21,6 +21,12 @@
 # 
 # compositionDF <- testingData
 
+# i=30
+# compositionDF = left_join(list_with_clusters_alpha0.50$dFrameAsv_hclust[,c(1,i+1)] %>% rename('name'=1,'Cluster'=2),
+#           dframe$ASV_composition)
+# 
+# compositionDF %>% group_by(Cluster) %>% summarise(freq=n())
+
 eval_adist_clustering <- function(compositionDF){
   ## @compositionDF is a dataframe containing the following collumns:
   ### 1 - ASVnames 
@@ -36,7 +42,8 @@ eval_adist_clustering <- function(compositionDF){
   
   dist_to_OverAllMedoid <- sum(as.matrix(aitMatrix)[medoid_id,])
   allPairWiseDist <- sum(aitMatrix)/2
-  
+  allPairWiseDist_squared <- sum(as.matrix(aitMatrix)^2)/2
+
   #Step 3 
   ## now splitting per clustering -----------------------
   nclusters <- length(unique(compositionDF$Cluster))
@@ -45,6 +52,10 @@ eval_adist_clustering <- function(compositionDF){
   medoid_clust_i <- numeric(length = nclusters)
   nobs_clust_i <- numeric(length = nclusters)
   pairwise_dist_clust_i <- numeric(length = nclusters)
+  pairwise_dist_clust_i_squared <- numeric(length = nclusters)
+  max_dist_within <- numeric(length = nclusters)
+  max_dist2medoid_within <- numeric(length = nclusters)
+  min_dist_clust_i_other <- numeric(length = nclusters)
   
   for(i in 1:nclusters){
     idx_clust_i <- which(compositionDF$Cluster==i)
@@ -54,17 +65,25 @@ eval_adist_clustering <- function(compositionDF){
       nobs_clust_i[i] <- length(idx_clust_i)
       aux_Adist <- as.matrix(aitMatrix)[idx_clust_i,idx_clust_i]
       pairwise_dist_clust_i[i] <- sum(aux_Adist)/2
+      pairwise_dist_clust_i_squared[i] <- sum(as.matrix(aux_Adist)^2)/2
       medoid_clust_i[i] = cluster::pam(x = as.dist(aux_Adist),k = 1)$id.med
       dist_within_clust_i[i] <- sum(aux_Adist[medoid_clust_i[i],])
+      max_dist_within[i] <- max(aux_Adist)
+      max_dist2medoid_within[i] <- max(aux_Adist[medoid_clust_i[i],])
+      min_dist_clust_i_other[i] <- min(as.matrix(aitMatrix)[idx_clust_i,-idx_clust_i])
+      ## keeping the medoid
       medoid_clust_i[i] <- idx_clust_i[medoid_clust_i[i]]
       
     }else{
       nobs_clust_i[i] <- 1
       aux_Adist <- 0
       pairwise_dist_clust_i[i] <- 0
+      pairwise_dist_clust_i_squared[i] <- 0
       medoid_clust_i[i] = idx_clust_i[1]
       dist_within_clust_i[i] <- 0
-      medoid_clust_i[i] <- idx_clust_i[1]
+      max_dist_within[i] <- 0
+      max_dist2medoid_within[i] <- 0
+      min_dist_clust_i_other[i] <- min(as.matrix(aitMatrix)[idx_clust_i,-idx_clust_i])
     }
   }
   
@@ -75,8 +94,17 @@ eval_adist_clustering <- function(compositionDF){
   
   denominator = (sum(as.matrix(aitMatrix)[medoid_clust_i,medoid_clust_i])/2) / choose(nclusters,2)
   
-  output<- list()
+  ######## permanova :
+  SST = allPairWiseDist_squared / nrow(compositionDF)
+  SSW = sum(pairwise_dist_clust_i_squared/nobs_clust_i)
+  SSA = SST - SSW
+  Fstat = (SSA/(nclusters-1))/(SSW/(nrow(compositionDF)-nclusters))
   
+  ######## maxdist - points 
+  max_max_dist_within = max(max_dist_within)
+  min_min_dist_clust_i_other = min(min_dist_clust_i_other)
+  
+  output<- list()
   # outputs with no medoid reference
   output$sum_pairwise = allPairWiseDist
   output$pairwise_dist_within = pairwise_dist_clust_i
@@ -89,6 +117,20 @@ eval_adist_clustering <- function(compositionDF){
   output$avg_between_medoids = denominator
   output$obs_per_cluster = nobs_clust_i
   output$ratio_avg_within_between = numerator/denominator
+  
+  output$max_dist_within = max_dist_within
+  output$max_dist2medoid_within = max_dist2medoid_within
+  output$min_dist_clust_i_other = min_dist_clust_i_other
+  
+  output$max_max_dist_within = max_max_dist_within
+  output$min_min_dist_clust_i_other = min_min_dist_clust_i_other
+  output$max_max_min_min_ratio = max_max_dist_within/min_min_dist_clust_i_other
+  
+  output$SST = SST
+  output$SSW = SSW
+  output$SSA = SSA
+  output$Fstat = Fstat
+  
   return(output)
 }
 
