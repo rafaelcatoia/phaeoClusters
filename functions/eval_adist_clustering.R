@@ -101,8 +101,12 @@ eval_adist_clustering <- function(compositionDF){
   Fstat = (SSA/(nclusters-1))/(SSW/(nrow(compositionDF)-nclusters))
   
   ######## maxdist - points 
-  max_max_dist_within = max(max_dist_within)
-  min_min_dist_clust_i_other = min(min_dist_clust_i_other)
+  max_max_dist_within        = max(max_dist_within)
+  avg_max_dist_within        = mean(max_dist_within)
+  #min_min_dist_clust_i_other = min(min_dist_clust_i_other)
+  avg_min_dist_clust_i_other = mean(min_dist_clust_i_other)
+  max_min_dist_clust_i_other = max(min_dist_clust_i_other)
+  
   
   output<- list()
   # outputs with no medoid reference
@@ -121,11 +125,14 @@ eval_adist_clustering <- function(compositionDF){
   output$max_dist_within = max_dist_within
   output$max_dist2medoid_within = max_dist2medoid_within
   output$min_dist_clust_i_other = min_dist_clust_i_other
+ 
+  output$max_max_dist_within        = max_max_dist_within       
+  output$avg_max_dist_within        = avg_max_dist_within       
+  #output$min_min_dist_clust_i_other = min_min_dist_clust_i_other
+  output$avg_min_dist_clust_i_other = avg_min_dist_clust_i_other
+  output$max_min_dist_clust_i_other = max_min_dist_clust_i_other
   
-  output$max_max_dist_within = max_max_dist_within
-  output$min_min_dist_clust_i_other = min_min_dist_clust_i_other
-  output$max_max_min_min_ratio = max_max_dist_within/min_min_dist_clust_i_other
-  
+   
   output$SST = SST
   output$SSW = SSW
   output$SSA = SSA
@@ -136,31 +143,25 @@ eval_adist_clustering <- function(compositionDF){
 
 #list_from_eval_adist_clustering = list_DisSum_0.1
 
-#nested_eval_list = list_DisSum_0.1
-summarise_AVG_Dist <- function(nested_eval_list,name_alpha){
-  
-  list2df <- function(eval_list){
-    return(df_summary = plyr::ldply(eval_list, function(el){
-      data.frame(
-        ratio_avg_within_between = el$ratio_avg_within_between, 
-        mean_avg_within = el$mean_avg_within,
-        avg_between_medoids = el$avg_between_medoids
-      )},
-      .id = "test") %>% 
-        mutate(nclusters=as.integer( 1:n()+1)))
-  }
-  vetnames = names(nested_eval_list)
-  
-  df_list <- list()
-  for( i in 1:length(nested_eval_list)){
-    df_list[[i]] <- list2df(nested_eval_list[[i]]) %>% 
-      mutate(alpha_val=name_alpha,scenario=vetnames[i])
-  }
-  
-  df_output <- data.table::rbindlist(df_list)
-  
-  return(df_output)
-  
+summarise_adist_clustering <- function(list_results_eval){
+  list_results_eval %>% plyr::ldply(function(el){
+    data.frame(
+      nclust = length(el$avg_within),
+      #max_max_min_min_ratio = el$max_max_min_min_ratio,
+      Fstat = el$Fstat,
+      SSA = el$SSA,
+      mean_avg_within = el$mean_avg_within,
+      avg_between_medoids = el$avg_between_medoids,
+      ratio_avg_within_between = el$ratio_avg_within_between,
+      max_max_dist_within = el$max_max_dist_within,
+      max_min_dist_clust_i_other = el$max_min_dist_clust_i_other,
+      avg_max_dist_within = el$avg_max_dist_within,
+      avg_min_dist_clust_i_other = el$avg_min_dist_clust_i_other,
+      ratio_avg_max_min = el$avg_max_dist_within/el$avg_min_dist_clust_i_other
+      #min_min_dist_clust_i_other = el$min_min_dist_clust_i_other
+    )
+  }) %>%
+    return()
 }
 
 

@@ -19,7 +19,7 @@ format:
 
 # Data Handling
 ```{r}
-library('dplyr') ; library('tidyr') ; 
+library('dplyr') ; library('tidyr') ; library('ggplot2') 
 
 root <- rprojroot::has_file(".git/index")
 datadir = root$find_file("data")
@@ -97,9 +97,11 @@ $\delta^2_{ij}$ is an indicator function (1 if obs$i$ and $j$ are from the same 
 
 $$ F = \frac{\frac{SS_{A}}{p-1}}{\frac{SS_{W}}{N-p}} $$
 
+## New proposed
+
 :::
 
-# Criando Clusters
+# Creating the clusters
 ```{r}
 running=F
 
@@ -151,8 +153,66 @@ list_with_clusters_alpha0.50 = readRDS(file = paste0(savingdir,'/','list_with_cl
 
 # Calculating Metrics
 
-```{r}
 
+
+::: panel-tabset
+
+## hclust
+
+```{r}
+running = F
+
+if(running){
+  nclusters <- ncol(list_with_clusters_alpha0$dFrameAsv_hclust)-1
+  list_results <- list()
+  
+  for( i in 1:nclusters){
+    list_results[[i]] <-  eval_adist_clustering(compositionDF = left_join(
+      list_with_clusters_alpha0$dFrameAsv_hclust[,c(1,i+1)] %>% rename('name'=1,'Cluster'=2),
+      dframe$ASV_composition))
+    cat('iteration------:',i,'\n')
+  }
+  saveRDS(list_results,file = paste0(savingdir,'/','list_results_eval_alpha0_hclust'))
+}
+
+list_results_eval_alpha0_hclust = readRDS(paste0(savingdir,'/','list_results_eval_alpha0_hclust'))
+
+summarise_adist_clustering(list_results_eval_alpha0_hclust) %>%
+  reshape2::melt(id.vars = "nclust") %>% 
+  filter(nclust > 1) %>% 
+  ggplot(aes(x = nclust, y = value, group = variable)) +
+    geom_line() +
+    theme_minimal(base_size = 12) +
+    facet_wrap(~variable, scales = "free_y")
 ```
+## pam
+
+```{r}
+running =F
+
+if(running){
+  nclusters <- ncol(list_with_clusters_alpha0$dFrameAsv_pam)-1
+  list_results <- list()
+  
+  for( i in 1:nclusters){
+    list_results[[i]] <-  eval_adist_clustering(compositionDF = left_join(
+      list_with_clusters_alpha0$dFrameAsv_pam[,c(1,i+1)] %>% rename('name'=1,'Cluster'=2),
+      dframe$ASV_composition))
+    cat('iteration------:',i,'\n')
+  }
+  saveRDS(list_results,file = paste0(savingdir,'/','list_results_eval_alpha0_pam'))
+}
+
+list_results_eval_alpha0_pam = readRDS(paste0(savingdir,'/','list_results_eval_alpha0_pam'))
+
+summarise_adist_clustering(list_results_eval_alpha0_pam) %>%
+  reshape2::melt(id.vars = "nclust") %>% 
+  filter(nclust > 1) %>% 
+  ggplot(aes(x = nclust, y = value, group = variable)) +
+    geom_line() +
+    theme_minimal(base_size = 12) +
+    facet_wrap(~variable, scales = "free_y")
+```
+::: 
 
 :::
