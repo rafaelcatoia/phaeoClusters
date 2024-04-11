@@ -20,7 +20,7 @@ format:
 # Data Handling
 ```{r}
 library(dplyr) ; library(tidyr) ; library(ggplot2) 
-library(doParallel) ; library(foreach) 
+library(doParallel) ; library(foreach) ; library(doSNOW)
 
 root <- rprojroot::has_file(".git/index")
 datadir = root$find_file("data")
@@ -34,8 +34,13 @@ for( i in 1:length(files_vec)){
   source(root$find_file(paste0(funsdir,'/',files_vec[i])))
 }
 
-dframe = data.table::fread(input = datapath)
+funcitons_parallel = c("clusterize_ward_pam",
+                       "eval_adist_clustering",
+                       "inducedDist",
+                       "summarise_adist_clustering",
+                       "tidy_grump")
 
+dframe = data.table::fread(input = datapath)
 dframe = tidy_grump(Dframe = dframe)
 ```
 
@@ -98,9 +103,21 @@ $\delta^2_{ij}$ is an indicator function (1 if obs$i$ and $j$ are from the same 
 
 $$ F = \frac{\frac{SS_{A}}{p-1}}{\frac{SS_{W}}{N-p}} $$
 
-## New proposed
+## New metric
+
+
+The idea of the new metric is: what if we represent the heterogeneity of a cluster by its maximum distance. Therefore, the average maximum distance within tends to decrease as the number of cluster increases.
+
+In counterpart, let's think the min distance between clusters as how different two clusters are. Thus, the average minimum distance between clusters also tends to decrease as the number of clusters increase.
+
+Lets call this metric $T$.
+
+$$T = \frac{\frac{1}{k}\sum_{(i,j)\in k}\max(d(x_i,x_j))}
+{\frac{1}{k}\sum_{(i,j)\notin k}\min(d(x_i,x_j))}$$
+
 
 :::
+
 
 # Creating the clusters
 ```{r}
@@ -226,18 +243,35 @@ For $\alpha = 0$
 ```{r}
 running = F
 if (running){
-  set.seed(1234)
-alpha0_bootstrap = finding_optimal_k(
+set.seed(1234)
+alpha0_bootstrap = finding_optimal_k_parallel(
   dframe_asv = dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-  B = 10,split_pct = 0.5,maxnclust_ = 30)
-
-alpha0_bootstrap_df <- data.table::rbindlist(alpha0_bootstrap) %>% data.frame()
-  saveRDS(alpha0_bootstrap,file = paste0(savingdir,'/','alpha0_bootstrap_df'))
+  B = 100,split_pct = 0.5,maxnclust_ = 50,vec_functions_fromEnv = funcitons_parallel)
+  saveRDS(alpha0_bootstrap,file = paste0(savingdir,'/','alpha0_bootstrap'))
 }
-
-alpha0_bootstrap_df = readRDS(file = paste0(savingdir,'/','alpha0_bootstrap_df'))
 ```
 
+
+```{r}
+alpha0_bootstrap_df = readRDS(paste0(savingdir,'/','alpha0_bootstrap'))
+alpha0_bootstrap_df = data.table::rbindlist(alpha0_bootstrap_df) %>% data.frame()
+
+number_clusters <- alpha0_bootstrap_df %>% select(nclust) %>% max()
+alpha0_bootstrap_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  #mutate(nclust=factor(nclust,levels=1:number_clusters)) %>% 
+  group_by(method,nclust,variable) %>% 
+  summarise(avg=mean(value),stdev=sd(value)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = nclust, y = avg, group = method,color=method,fill=method)) +
+    geom_line() +
+    geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
+    theme_minimal(base_size = 12) +
+    facet_wrap(~variable, scales = "free_y")+
+  theme(legend.position = 'bottom')
+```
 ## Alpha = 0.1
 
 
@@ -248,23 +282,6 @@ alpha0_bootstrap_df = readRDS(file = paste0(savingdir,'/','alpha0_bootstrap_df')
 
 :::
 
-```{r}
-df_results %>% 
-  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
-  filter(nclust > 1) %>% 
-  select(-iteration) %>% 
-  mutate(nclust=factor(nclust,levels=1:10)) %>% 
-  group_by(method,nclust,variable) %>% 
-  summarise(across(.cols = where(is.numeric),
-                .fns = c(mean,sd),
-                .names = c('avg','stdev'))) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = nclust, y = avg, group = method,color=method,fill=method)) +
-    geom_line() +
-    geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
-    theme_minimal(base_size = 12) +
-    facet_wrap(~variable, scales = "free_y")
-```
 
 
 :::
