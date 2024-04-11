@@ -1,7 +1,12 @@
 #dframe_asv <- dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts)
 
 
-finding_optimal_k_parallel <- function(dframe_asv, B=10,split_pct = 0.75,maxnclust_ = 25,vec_functions_fromEnv){
+finding_optimal_k_parallel <- function(
+    dframe_asv,
+    B=10,split_pct = 0.75,
+    maxnclust_ = 25,
+    vec_functions_fromEnv){
+  
   #B is the number of splits
   #split_pct is the percentage of samples we will use to fit, therefore (1-0.75) will be used to evaluate that.
   

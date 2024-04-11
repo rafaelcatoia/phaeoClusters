@@ -62,9 +62,10 @@ $c_1=1$, $c_2=1000$, $c_3=10$ , $c_4=10$
 A priori, the 'probability` of unassigned ASVs to agglomerate between themselves is the same as if it was to agglomerate with other species. Large $c_2$ makes it harder for known species ASVs to group between themselves.
 
 ```{r}
-inducedDist = inducedDist(dFrame = dframe$dframe,
-                          c1 = 1,c2=1000,c3=10,c4=10,
-                          compMatrix = dframe$ASV_composition)
+inducedDist_ = inducedDist(
+  dFrame = dframe$dframe,
+  c1 = 1,c2=1000,c3=10,c4=10,
+  compMatrix = dframe$ASV_composition)
 
 #inducedDist$myDist_checking
 ```
@@ -126,13 +127,13 @@ running=F
 if(running){
   ## pure biotic factors = 
   list_with_clusters_alpha0 <- clusterize_ward_pam(
-    distMatrix = inducedDist$normalizedAitDist,
+    distMatrix = inducedDist_$normalizedAitDist,
     maxnclust = 50,
     dFrameAsv = dframe$ASV_composition$name)
   
   alpha_=0.1
   
-  distMatrix_ = alpha_*inducedDist$normalizedMyDist+(1-alpha_)*inducedDist$normalizedAitDist
+  distMatrix_ = alpha_*inducedDist_$normalizedMyDist+(1-alpha_)*inducedDist_$normalizedAitDist
   
   list_with_clusters_alpha0.10 <- clusterize_ward_pam(
     distMatrix = distMatrix_,
@@ -141,7 +142,7 @@ if(running){
 
   alpha_=0.25
   
-  distMatrix_ = alpha_*inducedDist$normalizedMyDist+(1-alpha_)*inducedDist$normalizedAitDist
+  distMatrix_ = alpha_*inducedDist_$normalizedMyDist+(1-alpha_)*inducedDist_$normalizedAitDist
   
   list_with_clusters_alpha0.25 <- clusterize_ward_pam(
     distMatrix = distMatrix_,
@@ -150,7 +151,7 @@ if(running){
   
   alpha_=0.5
   
-  distMatrix_ = alpha_*inducedDist$normalizedMyDist+(1-alpha_)*inducedDist$normalizedAitDist
+  distMatrix_ = alpha_*inducedDist_$normalizedMyDist+(1-alpha_)*inducedDist_$normalizedAitDist
   
   list_with_clusters_alpha0.50 <- clusterize_ward_pam(
     distMatrix = distMatrix_,
@@ -238,6 +239,10 @@ summarise_adist_clustering(list_results_eval_alpha0_pam) %>%
 
 ## Alpha = 0 
 
+::: panel-tabset
+
+### Proposed Metrics
+
 For $\alpha = 0$
 
 ```{r}
@@ -272,12 +277,120 @@ alpha0_bootstrap_df %>%
     facet_wrap(~variable, scales = "free_y")+
   theme(legend.position = 'bottom')
 ```
+
+### Permanova
+
+```{r}
+running = F
+if(running){
+perm_alpha0 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0,file = paste0(savingdir,'/','perm_alpha0'))
+}
+perm_alpha0 <- readRDS(paste0(savingdir,'/','perm_alpha0'))
+
+
+df_permanova <- plyr::ldply(perm_alpha0$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha0$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+
+df_perm = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+)
+
+df_perm %>% 
+  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
+  geom_line()+
+  theme_minimal()+
+  theme(legend.position = 'bottom')
+
+```
+
+
+:::
+
 ## Alpha = 0.1
 
+### Permanova
+
+```{r}
+running = F
+if(running){
+perm_alpha0.10 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0.10,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0.10,file = paste0(savingdir,'/','perm_alpha0.10'))
+}
+perm_alpha0.10 <- readRDS(paste0(savingdir,'/','perm_alpha0.10'))
+
+
+df_permanova <- plyr::ldply(perm_alpha0.10$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha0.10$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+
+df_perm = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+)
+
+df_perm %>% 
+  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
+  geom_line()+
+  theme_minimal()+
+  theme(legend.position = 'bottom')
+```
 
 
 ## Alpha = 0.25
 
+### Permanova
+
+```{r}
+running = F
+if(running){
+perm_alpha0.25 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0.25,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0.25,file = paste0(savingdir,'/','perm_alpha0.25'))
+}
+perm_alpha0.25 <- readRDS(paste0(savingdir,'/','perm_alpha0.25'))
+
+
+df_permanova <- plyr::ldply(perm_alpha0.25$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha0.25$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+
+df_perm = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+)
+
+df_perm %>% 
+  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
+  geom_line()+
+  theme_minimal()+
+  theme(legend.position = 'bottom')
+```
 
 
 :::
