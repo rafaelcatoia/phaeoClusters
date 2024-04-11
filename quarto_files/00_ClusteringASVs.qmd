@@ -234,6 +234,77 @@ summarise_adist_clustering(list_results_eval_alpha0_pam) %>%
 
 # Splitting and Evaluating Metrics
 
+::: panel-tabset
+
+## Calculating 
+
+Here you will only find the scripts to generate the results 
+
+```{r}
+############# -- arranging data
+
+############# Finding K -------------------------------------------------------------------
+running = F
+if (running){
+set.seed(1234)
+alpha0_bootstrap = finding_optimal_k_parallel(
+  dframe_asv = dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+  B = 500,split_pct = 0.5,maxnclust_ = 50,vec_functions_fromEnv = funcitons_parallel)
+  saveRDS(alpha0_bootstrap,file = paste0(savingdir,'/','alpha0_bootstrap'))
+}
+
+############# Finding K -------------------------------------------------------------------
+```
+
+
+```{r}
+############# Permanova -------------------------------------------------------------------
+running = F
+if(running){
+perm_alpha0 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 500)
+saveRDS(perm_alpha0,file = paste0(savingdir,'/','perm_alpha0'))
+}
+
+running = F
+if(running){
+perm_alpha0.10 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0.10,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0.10,file = paste0(savingdir,'/','perm_alpha0.10'))
+}
+
+running = F
+if(running){
+perm_alpha0.25 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0.25,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0.25,file = paste0(savingdir,'/','perm_alpha0.25'))
+}
+
+running = F
+if(running){
+perm_alpha0.50 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0.50,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0.50,file = paste0(savingdir,'/','perm_alpha0.50'))
+}
+
+```
+
+```{r}
+## arranging the results
+
+```
+
+## Results
+:::
+
 
 ::: panel-tabset
 
@@ -244,18 +315,6 @@ summarise_adist_clustering(list_results_eval_alpha0_pam) %>%
 ### Proposed Metrics
 
 For $\alpha = 0$
-
-```{r}
-running = F
-if (running){
-set.seed(1234)
-alpha0_bootstrap = finding_optimal_k_parallel(
-  dframe_asv = dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-  B = 100,split_pct = 0.5,maxnclust_ = 50,vec_functions_fromEnv = funcitons_parallel)
-  saveRDS(alpha0_bootstrap,file = paste0(savingdir,'/','alpha0_bootstrap'))
-}
-```
-
 
 ```{r}
 alpha0_bootstrap_df = readRDS(paste0(savingdir,'/','alpha0_bootstrap'))
@@ -281,14 +340,7 @@ alpha0_bootstrap_df %>%
 ### Permanova
 
 ```{r}
-running = F
-if(running){
-perm_alpha0 = permanova_custom(
-  list_with_clusters = list_with_clusters_alpha0,
-  ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
-saveRDS(perm_alpha0,file = paste0(savingdir,'/','perm_alpha0'))
-}
+
 perm_alpha0 <- readRDS(paste0(savingdir,'/','perm_alpha0'))
 
 
@@ -318,6 +370,11 @@ df_perm %>%
 :::
 
 ## Alpha = 0.1
+
+::: panel-tabset
+
+### Proposed Metrics
+
 
 ### Permanova
 
@@ -354,8 +411,15 @@ df_perm %>%
   theme(legend.position = 'bottom')
 ```
 
+:::
 
 ## Alpha = 0.25
+
+
+::: panel-tabset
+
+### Proposed Metrics
+
 
 ### Permanova
 
@@ -391,7 +455,50 @@ df_perm %>%
   theme_minimal()+
   theme(legend.position = 'bottom')
 ```
+:::
 
+## Alpha = 0.5
+
+::: panel-tabset
+
+### Proposed Metrics
+
+### Permanova
+
+```{r}
+running = F
+if(running){
+perm_alpha0.50 = permanova_custom(
+  list_with_clusters = list_with_clusters_alpha0.50,
+  ait_distMatrix = inducedDist_$normalizedAitDist,
+  B = 1000)
+saveRDS(perm_alpha0.50,file = paste0(savingdir,'/','perm_alpha0.50'))
+}
+perm_alpha0.50 <- readRDS(paste0(savingdir,'/','perm_alpha0.50'))
+
+
+df_permanova <- plyr::ldply(perm_alpha0.50$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha0.50$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+
+df_perm = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+)
+
+df_perm %>% 
+  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
+  geom_line()+
+  theme_minimal()+
+  theme(legend.position = 'bottom')
+```
+
+:::
 
 :::
 
