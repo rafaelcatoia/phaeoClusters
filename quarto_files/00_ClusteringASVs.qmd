@@ -19,7 +19,8 @@ format:
 
 # Data Handling
 ```{r}
-library('dplyr') ; library('tidyr') ; library('ggplot2') 
+library(dplyr) ; library(tidyr) ; library(ggplot2) 
+library(doParallel) ; library(foreach) 
 
 root <- rprojroot::has_file(".git/index")
 datadir = root$find_file("data")
@@ -60,7 +61,7 @@ inducedDist = inducedDist(dFrame = dframe$dframe,
                           c1 = 1,c2=1000,c3=10,c4=10,
                           compMatrix = dframe$ASV_composition)
 
-inducedDist$myDist_checking
+#inducedDist$myDist_checking
 ```
 # Metrics
 
@@ -153,8 +154,6 @@ list_with_clusters_alpha0.50 = readRDS(file = paste0(savingdir,'/','list_with_cl
 
 # Calculating Metrics
 
-
-
 ::: panel-tabset
 
 ## hclust
@@ -214,5 +213,58 @@ summarise_adist_clustering(list_results_eval_alpha0_pam) %>%
     facet_wrap(~variable, scales = "free_y")
 ```
 ::: 
+
+# Splitting and Evaluating Metrics
+
+
+::: panel-tabset
+
+## Alpha = 0 
+
+For $\alpha = 0$
+
+```{r}
+running = F
+if (running){
+  set.seed(1234)
+alpha0_bootstrap = finding_optimal_k(
+  dframe_asv = dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+  B = 10,split_pct = 0.5,maxnclust_ = 30)
+
+alpha0_bootstrap_df <- data.table::rbindlist(alpha0_bootstrap) %>% data.frame()
+  saveRDS(alpha0_bootstrap,file = paste0(savingdir,'/','alpha0_bootstrap_df'))
+}
+
+alpha0_bootstrap_df = readRDS(file = paste0(savingdir,'/','alpha0_bootstrap_df'))
+```
+
+## Alpha = 0.1
+
+
+
+## Alpha = 0.25
+
+
+
+:::
+
+```{r}
+df_results %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  mutate(nclust=factor(nclust,levels=1:10)) %>% 
+  group_by(method,nclust,variable) %>% 
+  summarise(across(.cols = where(is.numeric),
+                .fns = c(mean,sd),
+                .names = c('avg','stdev'))) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = nclust, y = avg, group = method,color=method,fill=method)) +
+    geom_line() +
+    geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
+    theme_minimal(base_size = 12) +
+    facet_wrap(~variable, scales = "free_y")
+```
+
 
 :::

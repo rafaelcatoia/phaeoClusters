@@ -98,8 +98,9 @@ eval_adist_clustering <- function(compositionDF){
   SST = allPairWiseDist_squared / nrow(compositionDF)
   SSW = sum(pairwise_dist_clust_i_squared/nobs_clust_i)
   SSA = SST - SSW
-  Fstat = (SSA/(nclusters-1))/(SSW/(nrow(compositionDF)-nclusters))
-  
+  Fstat_num = (SSA/(nclusters-1))
+  Fstat_denon = (SSW/(nrow(compositionDF)-nclusters))
+  Fstat = Fstat_num/Fstat_denon
   ######## maxdist - points 
   max_max_dist_within        = max(max_dist_within)
   avg_max_dist_within        = mean(max_dist_within)
@@ -137,7 +138,8 @@ eval_adist_clustering <- function(compositionDF){
   output$SSW = SSW
   output$SSA = SSA
   output$Fstat = Fstat
-  
+  output$Fstat_num = Fstat_num
+  output$Fstat_denon = Fstat_denon
   return(output)
 }
 
@@ -150,6 +152,9 @@ summarise_adist_clustering <- function(list_results_eval){
       #max_max_min_min_ratio = el$max_max_min_min_ratio,
       Fstat = el$Fstat,
       SSA = el$SSA,
+      #SST = el$SST,
+      #SSW = el$SSW,
+      SSW = el$SSW,
       mean_avg_within = el$mean_avg_within,
       avg_between_medoids = el$avg_between_medoids,
       ratio_avg_within_between = el$ratio_avg_within_between,
