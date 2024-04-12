@@ -4,7 +4,7 @@ asv_stable_calc <- function(
     split_pct = 0.75,
     nclust=10,
     vec_functions_fromEnv,
-    splittingInducerMatrix=NULL){
+    splittingInducerMatrix=NULL,alpha_=0.1){
   
   #### Function that will probably be used only here.
   dist_given_cluster <- function(df_ASv_ClusterMembership){
@@ -64,7 +64,7 @@ asv_stable_calc <- function(
       
       ##### creating the mixture of distance matrices 
       if(!is.null(splittingInducerMatrix)){
-        
+        aitDist_fit <- (1-alpha_) * as.matrix(aitDist_fit) + alpha_*as.matrix(splittingInducerMatrix)
       }
       ##### creating the clusters 
       

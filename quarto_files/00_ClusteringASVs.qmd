@@ -566,6 +566,46 @@ df_perm %>% filter(nclust>1) %>%
 ::: panel-tabset
 
 ## Calculating
+```{r}
+######## --- stable with alpha = 0 
+running=F 
+if(running)
+  stable_obj_alpha0 <- asv_stable_calc(
+    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+    B=250,
+    split_pct = 0.5,
+    nclust=10,
+    vec_functions_fromEnv=funcitons_parallel,
+    splittingInducerMatrix=NULL
+  )
+
+######## --- stable with alpha = 0.1
+if(running){
+  stable_obj_alpha0.10 <- asv_stable_calc(
+    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+    B=25,
+    split_pct = 0.5,
+    nclust=10,
+    vec_functions_fromEnv=funcitons_parallel,
+    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.1)
+  saveRDS(object = stable_obj_alpha0.10,
+          file = paste0(savingdir,'/','stable_obj_alpha0.10'))
+}
+
+######## --- stable with alpha = 0.25
+if(running){
+  stable_obj_alpha0.25 <- asv_stable_calc(
+    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+    B=14,
+    split_pct = 0.5,
+    nclust=10,
+    vec_functions_fromEnv=funcitons_parallel,
+    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.25)
+  saveRDS(object = stable_obj_alpha0.25,
+          file = paste0(savingdir,'/','stable_obj_alpha0.25'))
+}
+
+```
 
 
 
