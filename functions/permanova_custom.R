@@ -8,7 +8,7 @@
 
 permanova_custom <- function(
     list_with_clusters,
-    ait_distMatrix,
+    ait_distMatrix,cpus=7,
     B=100){
   
   # hardcoded but... why not?
@@ -20,14 +20,14 @@ permanova_custom <- function(
     dfGroups <- data.frame(groups_ = as.factor(list_with_clusters$dFrameAsv_hclust[,i+1]))
     list_permanova_hclust[[i]] <- vegan::adonis2(
       formula = as.dist(ait_distMatrix)~groups_,data = dfGroups,
-      permutations = B,parallel = 7)
+      permutations = B,parallel = cpus)
     list_permanova_hclust[[i]]$nclust <- i
     
   
     dfGroups <- data.frame(groups_=as.factor(list_with_clusters$dFrameAsv_pam[,i+1]))
     list_permanova_pam[[i]] <- vegan::adonis2(
       formula = as.dist(ait_distMatrix)~groups_,data = dfGroups,
-      permutations = B,parallel = 7)
+      permutations = B,parallel = cpus)
     list_permanova_pam[[i]]$nclust <- i
     cat('iteration--------------- ',i,' of ', number_clusters,'\n')
   }

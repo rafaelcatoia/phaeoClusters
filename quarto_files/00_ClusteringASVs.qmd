@@ -14,10 +14,9 @@ format:
     embed-resources: true
 ---
 
-
 ::: panel-tabset
-
 # Data Handling
+
 ```{r}
 library(dplyr) ; library(tidyr) ; library(ggplot2) 
 library(doParallel) ; library(foreach) ; library(doSNOW)
@@ -29,11 +28,13 @@ savingdir = root$find_file("saved_files")
 
 datapath = root$find_file(paste0(datadir,'/','grump.phaeocystis_asv_long.csv'))
 files_vec <- list.files(funsdir)
+currentwd <- getwd()
 
 for( i in 1:length(files_vec)){
   source(root$find_file(paste0(funsdir,'/',files_vec[i])))
 }
 
+getwd()
 funcitons_parallel = c("clusterize_ward_pam",
                        "eval_adist_clustering",
                        "inducedDist",
@@ -53,13 +54,13 @@ The idea is to create a 'custom' distance matrix, to induce the grouppings.
 -   $c_3$ is between species and unassigned
 -   $c_4$ is within unassigned and unassigned
 
-![](InduceddistMatrix.png){width=25% fig-align="center"}
+![](InduceddistMatrix.png){width="25%" fig-align="center"}
 
 For this document we will use only the following configuration:
 
 $c_1=1$, $c_2=1000$, $c_3=10$ , $c_4=10$
 
-A priori, the 'probability` of unassigned ASVs to agglomerate between themselves is the same as if it was to agglomerate with other species. Large $c_2$ makes it harder for known species ASVs to group between themselves.
+A priori, the 'probability\` of unassigned ASVs to agglomerate between themselves is the same as if it was to agglomerate with other species. Large $c_2$ makes it harder for known species ASVs to group between themselves.
 
 ```{r}
 inducedDist_ = inducedDist(
@@ -69,15 +70,15 @@ inducedDist_ = inducedDist(
 
 #inducedDist$myDist_checking
 ```
+
 # Metrics
 
 ::: panel-tabset
-
 ## Proposed
 
 $$ S = \frac{numerator}{denominator} $$
 
-Where: 
+Where:
 
 $$ numerator = \frac{1}{k} \left( \sum_{j=1}^{k}  \left[ \frac{1}{n_j}\sum_{i}^{n_j} d(x_i-\bar x^{(j)} ) \right]  \right) $$
 
@@ -91,12 +92,11 @@ The average distance between clusters (each cluster is represented by it's medoi
 
 $$ S = \frac{numerator}{denominator} $$
 
-Where: 
+Where:
 
 $$ SS_T = \frac{1}{N} \sum_{i=1}^{N-1}  \sum_{j=i+1}^{N-1} d^2_{ij} $$
 
 Being $d^2_{ij}$ is the squared distance between objects $i$ and $j$.
-
 
 $$ SS_W = \frac{1}{n} \sum_{i=1}^{N-1}  \sum_{j=i+1}^{N-1} d^2_{ij}\delta^2_{ij} $$
 
@@ -106,7 +106,6 @@ $$ F = \frac{\frac{SS_{A}}{p-1}}{\frac{SS_{W}}{N-p}} $$
 
 ## New metric
 
-
 The idea of the new metric is: what if we represent the heterogeneity of a cluster by its maximum distance. Therefore, the average maximum distance within tends to decrease as the number of cluster increases.
 
 In counterpart, let's think the min distance between clusters as how different two clusters are. Thus, the average minimum distance between clusters also tends to decrease as the number of clusters increase.
@@ -115,12 +114,10 @@ Lets call this metric $T$.
 
 $$T = \frac{\frac{1}{k}\sum_{(i,j)\in k}\max(d(x_i,x_j))}
 {\frac{1}{k}\sum_{(i,j)\notin k}\min(d(x_i,x_j))}$$
-
-
 :::
 
-
 # Creating the clusters
+
 ```{r}
 running=F
 
@@ -173,7 +170,6 @@ list_with_clusters_alpha0.50 = readRDS(file = paste0(savingdir,'/','list_with_cl
 # Calculating Metrics
 
 ::: panel-tabset
-
 ## hclust
 
 ```{r}
@@ -202,6 +198,7 @@ summarise_adist_clustering(list_results_eval_alpha0_hclust) %>%
     theme_minimal(base_size = 12) +
     facet_wrap(~variable, scales = "free_y")
 ```
+
 ## pam
 
 ```{r}
@@ -230,15 +227,14 @@ summarise_adist_clustering(list_results_eval_alpha0_pam) %>%
     theme_minimal(base_size = 12) +
     facet_wrap(~variable, scales = "free_y")
 ```
-::: 
+:::
 
 # Splitting and Evaluating Metrics
 
 ::: panel-tabset
+## Calculating
 
-## Calculating 
-
-Here you will only find the scripts to generate the results 
+Here you will only find the scripts to generate the results
 
 ```{r}
 ############# -- arranging data
@@ -256,7 +252,6 @@ alpha0_bootstrap = finding_optimal_k_parallel(
 ############# Finding K -------------------------------------------------------------------
 ```
 
-
 ```{r}
 ############# Permanova -------------------------------------------------------------------
 running = F
@@ -273,7 +268,7 @@ if(running){
 perm_alpha0.10 = permanova_custom(
   list_with_clusters = list_with_clusters_alpha0.10,
   ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
+  B = 500)
 saveRDS(perm_alpha0.10,file = paste0(savingdir,'/','perm_alpha0.10'))
 }
 
@@ -282,7 +277,7 @@ if(running){
 perm_alpha0.25 = permanova_custom(
   list_with_clusters = list_with_clusters_alpha0.25,
   ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
+  B = 500)
 saveRDS(perm_alpha0.25,file = paste0(savingdir,'/','perm_alpha0.25'))
 }
 
@@ -291,7 +286,7 @@ if(running){
 perm_alpha0.50 = permanova_custom(
   list_with_clusters = list_with_clusters_alpha0.50,
   ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
+  B = 500)
 saveRDS(perm_alpha0.50,file = paste0(savingdir,'/','perm_alpha0.50'))
 }
 
@@ -300,28 +295,240 @@ saveRDS(perm_alpha0.50,file = paste0(savingdir,'/','perm_alpha0.50'))
 ```{r}
 ## arranging the results
 
+############# Finding K -------------------------------------------------------------------
+alpha0_cv = readRDS(paste0(savingdir,'/','alpha0_bootstrap'))
+alpha0_cv_df = data.table::rbindlist(alpha0_cv) %>% data.frame()
+
+
+
+############# Permanova -------------------------------------------------------------------
+perm_alpha <- readRDS(paste0(savingdir,'/','perm_alpha0'))
+
+df_permanova <- plyr::ldply(perm_alpha$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+
+df_perm_alpha0 = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+) %>% mutate(alpha=0)
+
+########### 0.1 
+
+perm_alpha <- readRDS(paste0(savingdir,'/','perm_alpha0.10'))
+
+df_permanova <- plyr::ldply(perm_alpha$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+
+df_perm_alpha0.10 = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+) %>% mutate(alpha=0.10)
+
+########### 0.25
+perm_alpha <- readRDS(paste0(savingdir,'/','perm_alpha0.25'))
+
+df_permanova <- plyr::ldply(perm_alpha$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_perm_alpha0.25 = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+) %>% mutate(alpha=0.25)
+
+########### 0.50
+perm_alpha <- readRDS(paste0(savingdir,'/','perm_alpha0.50'))
+
+df_permanova <- plyr::ldply(perm_alpha$hclust, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_permanova2 <- plyr::ldply(perm_alpha$pam, function(el){
+  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
+}, .id = "nclust")
+
+df_perm_alpha0.50 = bind_rows(
+  df_permanova %>% mutate(method='hclust'),
+  df_permanova2 %>% mutate(method='pam'),
+) %>% mutate(alpha=0.50)
+
+
+df_perm  = bind_rows(df_perm_alpha0,df_perm_alpha0.10,df_perm_alpha0.25,df_perm_alpha0.50)
 ```
 
 ## Results
-:::
-
 
 ::: panel-tabset
-
-## Alpha = 0 
-
-::: panel-tabset
-
 ### Proposed Metrics
 
-For $\alpha = 0$
+'CV-like' measurement was calculated at 500 iterations of:
+
+1.  After the split
+
+    -   create the composition of ASVs in 50% of the samples
+    -   fit the clustering methods (hclust and pam) from k = 1 : 50
+    -   evaluate each cluster in the 'test' data
 
 ```{r}
-alpha0_bootstrap_df = readRDS(paste0(savingdir,'/','alpha0_bootstrap'))
-alpha0_bootstrap_df = data.table::rbindlist(alpha0_bootstrap_df) %>% data.frame()
+# alpha0_cv_df %>% 
+#   reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+#   filter(nclust > 1) %>% 
+#   select(-iteration) %>% select(variable) %>% distinct() %>% pull()
 
-number_clusters <- alpha0_bootstrap_df %>% select(nclust) %>% max()
-alpha0_bootstrap_df %>% 
+group_summary = c('ratio_avg_within_between','ratio_avg_max_min')
+
+group_permanova = c('Fstat','SSA','SSW')
+group_S = c('ratio_avg_within_between','mean_avg_within','avg_between_medoids')
+
+group_max = c('max_max_dist_within','avg_max_dist_within','max_min_dist_clust_i_other',
+              'avg_min_dist_clust_i_other')
+```
+
+
+```{r}
+#| fig-width: 12
+#| fig-height: 6
+
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  filter(variable %in% group_summary) %>% 
+  group_by(method,nclust,variable) %>% 
+  summarise(avg=mean(value),stdev=sd(value)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = nclust, y = avg, group = method,
+             color=method,fill=method)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
+  theme_minimal(base_size = 16) +
+  facet_wrap(~variable, scales = "free_y")+
+  theme(legend.position = 'bottom')
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  filter(variable %in% group_permanova) %>% 
+  group_by(method,nclust,variable) %>% 
+  summarise(avg=mean(value),stdev=sd(value)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = nclust, y = avg, group = method,
+             color=method,fill=method)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
+  theme_minimal(base_size = 16) +
+  facet_wrap(~variable, scales = "free_y")+
+  theme(legend.position = 'bottom')
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  filter(variable %in% group_S) %>% 
+  group_by(method,nclust,variable) %>% 
+  summarise(avg=mean(value),stdev=sd(value)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = nclust, y = avg, group = method,
+             color=method,fill=method)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
+  theme_minimal(base_size = 16) +
+  facet_wrap(~variable, scales = "free_y")+
+  theme(legend.position = 'bottom')
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 8
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  filter(variable %in% group_max) %>% 
+  group_by(method,nclust,variable) %>% 
+  summarise(avg=mean(value),stdev=sd(value)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = nclust, y = avg, group = method,
+             color=method,fill=method)) +
+  geom_line() +
+  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.5)+
+  theme_minimal(base_size = 16) +
+  facet_wrap(~variable, scales = "free_y")+
+  theme(legend.position = 'bottom')
+```
+
+```{r}
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  #mutate(nclust=factor(nclust,levels=1:number_clusters)) %>% 
+  group_by(method,nclust,variable) %>% 
+  #summarise(avg=mean(value),stdev=sd(value)) %>% 
+  #ungroup() %>% 
+  #group_by(method,nclust,variable) %>% 
+  summarise(Freq_Problem = sum(is.infinite(value))) %>% 
+  filter(Freq_Problem>0) %>% 
+  knitr::kable() %>% kableExtra::kable_styling()
+```
+
+```{r}
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  #mutate(nclust=factor(nclust,levels=1:number_clusters)) %>% 
+  group_by(method,nclust,variable) %>% 
+  #summarise(avg=mean(value),stdev=sd(value)) %>% 
+  #ungroup() %>% 
+  #group_by(method,nclust,variable) %>% 
+  summarise(Freq_Problem = sum(is.infinite(value))) %>% 
+  filter(Freq_Problem>0) %>% 
+  knitr::kable() %>% kableExtra::kable_styling()
+```
+
+```{r}
+alpha0_cv_df %>% 
+  reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
+  filter(nclust > 1) %>% 
+  select(-iteration) %>% 
+  #mutate(nclust=factor(nclust,levels=1:number_clusters)) %>% 
+  group_by(method,nclust,variable) %>% 
+  #summarise(avg=mean(value),stdev=sd(value)) %>% 
+  #ungroup() %>% 
+  #group_by(method,nclust,variable) %>% 
+  summarise(Freq_Problem = sum(value==0)) %>% 
+  filter(Freq_Problem>0) %>% 
+  knitr::kable() %>% kableExtra::kable_styling()
+```
+
+```{r}
+alpha0_cv_df %>% 
   reshape2::melt(id.vars = c("nclust","method","iteration") ) %>%
   filter(nclust > 1) %>% 
   select(-iteration) %>% 
@@ -340,168 +547,30 @@ alpha0_bootstrap_df %>%
 ### Permanova
 
 ```{r}
-
-perm_alpha0 <- readRDS(paste0(savingdir,'/','perm_alpha0'))
-
-
-df_permanova <- plyr::ldply(perm_alpha0$hclust, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-df_permanova2 <- plyr::ldply(perm_alpha0$pam, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-
-df_perm = bind_rows(
-  df_permanova %>% mutate(method='hclust'),
-  df_permanova2 %>% mutate(method='pam'),
-)
-
-df_perm %>% 
-  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
+#| fig-width: 12
+#| fig-height: 6
+df_perm %>% filter(nclust>1) %>% 
+  mutate(alpha_=factor(alpha)) %>% 
+  ggplot(aes(
+  x=nclust,y=r2,color=method,linetype=alpha_
+  ))+
   geom_line()+
   theme_minimal()+
   theme(legend.position = 'bottom')
-
 ```
-
-
+:::
 :::
 
-## Alpha = 0.1
+# Consistency Metric
 
 ::: panel-tabset
 
-### Proposed Metrics
+## Calculating
 
 
-### Permanova
 
-```{r}
-running = F
-if(running){
-perm_alpha0.10 = permanova_custom(
-  list_with_clusters = list_with_clusters_alpha0.10,
-  ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
-saveRDS(perm_alpha0.10,file = paste0(savingdir,'/','perm_alpha0.10'))
-}
-perm_alpha0.10 <- readRDS(paste0(savingdir,'/','perm_alpha0.10'))
-
-
-df_permanova <- plyr::ldply(perm_alpha0.10$hclust, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-df_permanova2 <- plyr::ldply(perm_alpha0.10$pam, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-
-df_perm = bind_rows(
-  df_permanova %>% mutate(method='hclust'),
-  df_permanova2 %>% mutate(method='pam'),
-)
-
-df_perm %>% 
-  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
-  geom_line()+
-  theme_minimal()+
-  theme(legend.position = 'bottom')
-```
+## Results
 
 :::
-
-## Alpha = 0.25
-
-
-::: panel-tabset
-
-### Proposed Metrics
-
-
-### Permanova
-
-```{r}
-running = F
-if(running){
-perm_alpha0.25 = permanova_custom(
-  list_with_clusters = list_with_clusters_alpha0.25,
-  ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
-saveRDS(perm_alpha0.25,file = paste0(savingdir,'/','perm_alpha0.25'))
-}
-perm_alpha0.25 <- readRDS(paste0(savingdir,'/','perm_alpha0.25'))
-
-
-df_permanova <- plyr::ldply(perm_alpha0.25$hclust, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-df_permanova2 <- plyr::ldply(perm_alpha0.25$pam, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-
-df_perm = bind_rows(
-  df_permanova %>% mutate(method='hclust'),
-  df_permanova2 %>% mutate(method='pam'),
-)
-
-df_perm %>% 
-  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
-  geom_line()+
-  theme_minimal()+
-  theme(legend.position = 'bottom')
-```
-:::
-
-## Alpha = 0.5
-
-::: panel-tabset
-
-### Proposed Metrics
-
-### Permanova
-
-```{r}
-running = F
-if(running){
-perm_alpha0.50 = permanova_custom(
-  list_with_clusters = list_with_clusters_alpha0.50,
-  ait_distMatrix = inducedDist_$normalizedAitDist,
-  B = 1000)
-saveRDS(perm_alpha0.50,file = paste0(savingdir,'/','perm_alpha0.50'))
-}
-perm_alpha0.50 <- readRDS(paste0(savingdir,'/','perm_alpha0.50'))
-
-
-df_permanova <- plyr::ldply(perm_alpha0.50$hclust, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-df_permanova2 <- plyr::ldply(perm_alpha0.50$pam, function(el){
-  return(data.frame(nclust = el$nclust[1], pvalue = el$`Pr(>F)`[1], r2 = el$R2[1]))
-}, .id = "nclust")
-
-
-df_perm = bind_rows(
-  df_permanova %>% mutate(method='hclust'),
-  df_permanova2 %>% mutate(method='pam'),
-)
-
-df_perm %>% 
-  ggplot(aes(x=nclust,y=r2,group=method,color=method))+
-  geom_line()+
-  theme_minimal()+
-  theme(legend.position = 'bottom')
-```
-
-:::
-
-:::
-
-
 
 :::
