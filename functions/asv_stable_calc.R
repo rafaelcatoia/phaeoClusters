@@ -83,19 +83,7 @@ asv_stable_calc <- function(
     }
   stopCluster(cl)
   rm(cl)
-  
-  hclust_list <- plyr::llply(results, function(el){el$hclust})
-  pam_list <- plyr::llply(results, function(el){el$pam})
-  
-  test<-Reduce('+', hclust_list)
-  test_pam <-Reduce('+', pam_list)
-  
-  test = test/B
-  test_pam = test_pam/B
-  
-  out_list <- list(hclust_ = test,pam_ =test_pam )
-  
-  return(out_list)
+  return(results)
 }
 
 
