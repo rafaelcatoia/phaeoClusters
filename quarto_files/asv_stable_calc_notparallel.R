@@ -1,4 +1,4 @@
-asv_stable_calc <- function(
+asv_stable_calc_notparallel <- function(
     dframe_asv,
     B=10,
     split_pct = 0.75,

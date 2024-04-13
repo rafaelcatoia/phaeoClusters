@@ -568,22 +568,25 @@ df_perm %>% filter(nclust>1) %>%
 ## Calculating
 ```{r}
 ######## --- stable with alpha = 0 
+######## --- here is the script if you want to run it parallellized
+######## --- the caviat is that it uses too much memory - needs better implementation
 running=F 
-if(running)
+if(running){
   stable_obj_alpha0 <- asv_stable_calc(
     dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=250,
+    B=500,
     split_pct = 0.5,
     nclust=10,
     vec_functions_fromEnv=funcitons_parallel,
     splittingInducerMatrix=NULL
   )
+}
 
 ######## --- stable with alpha = 0.1
 if(running){
   stable_obj_alpha0.10 <- asv_stable_calc(
     dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=25,
+    B=500,
     split_pct = 0.5,
     nclust=10,
     vec_functions_fromEnv=funcitons_parallel,
@@ -596,7 +599,7 @@ if(running){
 if(running){
   stable_obj_alpha0.25 <- asv_stable_calc(
     dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=14,
+    B=500,
     split_pct = 0.5,
     nclust=10,
     vec_functions_fromEnv=funcitons_parallel,
@@ -604,6 +607,53 @@ if(running){
   saveRDS(object = stable_obj_alpha0.25,
           file = paste0(savingdir,'/','stable_obj_alpha0.25'))
 }
+
+######## --- here is the script for running it not parellized
+running=F 
+if(running){
+  stable_obj_alpha0 <- asv_stable_calc_notparallel(
+    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+    B=500,
+    split_pct = 0.5,
+    nclust=10,
+    splittingInducerMatrix=NULL
+  )
+}
+
+######## --- stable with alpha = 0.1
+if(running){
+  stable_obj_alpha0.10 <- asv_stable_calc_notparallel(
+    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+    B=500,
+    split_pct = 0.5,
+    nclust=10,
+    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.1)
+  saveRDS(object = stable_obj_alpha0.10,
+          file = paste0(savingdir,'/','stable_obj_alpha0.10'))
+}
+
+######## --- stable with alpha = 0.25
+if(running){
+  stable_obj_alpha0.25 <- asv_stable_calc_notparallel(
+    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
+    B=500,
+    split_pct = 0.5,
+    nclust=10,
+    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.25)
+  saveRDS(object = stable_obj_alpha0.25,
+          file = paste0(savingdir,'/','stable_obj_alpha0.25'))
+}
+
+######
+stable_obj_alpha0= readRDS(paste0(savingdir,'/','stable_obj_alpha0'))
+stable_obj_alpha0.10= readRDS(paste0(savingdir,'/','stable_obj_alpha0.10'))
+stable_obj_alpha0.25= readRDS(paste0(savingdir,'/','stable_obj_alpha0.25'))
+
+
+stable_obj_alpha0.10$hclust_[1:10,1:10]
+
+
+
 
 ```
 
