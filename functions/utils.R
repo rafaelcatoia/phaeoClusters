@@ -16,6 +16,10 @@ tidy_grump <- function(Dframe,removeMOSAiC=T){
   ASVs_toRemove = c('GRUMP203261','GRUMP203863') #ASVs that had raw sequence counts equal to zero
   Dframe = Dframe %>% filter(ASV_name%!in%ASVs_toRemove) # filtering those asvs
   
+  if(removeMOSAiC){
+    Dframe = Dframe %>% filter(Cruise!="MOSAiC" )
+  }
+  
   idAsvs = unique(Dframe$ASV_name) # listing all ASVs
   idSamples = unique(Dframe$SampleID) # listing all the sample names
   

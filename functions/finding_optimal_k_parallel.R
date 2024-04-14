@@ -5,7 +5,7 @@ finding_optimal_k_parallel <- function(
     dframe_asv,
     B=10,split_pct = 0.75,
     maxnclust_ = 25,
-    vec_functions_fromEnv){
+    vec_functions_fromEnv,alpha_=NULL,inducedDistMatrix=NULL){
   
   #B is the number of splits
   #split_pct is the percentage of samples we will use to fit, therefore (1-0.75) will be used to evaluate that.
@@ -63,7 +63,14 @@ finding_optimal_k_parallel <- function(
                        ##### clustering
                        aitDist_fit <- robCompositions::aDist(x = comp_fit[,-1])
                        norm_fit <- aitDist_fit/norm(as.matrix(aitDist_fit),type = '2')
+                       
+                       if(!is.null(inducedDistMatrix)){
+                         norm_fit <- (1-alpha_) * as.matrix(aitDist_fit) + alpha_*as.matrix(inducedDistMatrix)
+                       }
+                       
                        obj_clusterize <- clusterize_ward_pam(norm_fit,dFrameAsv =vet_asv_names, maxnclust = maxnclust_)
+                       
+                       
                        
                        
                        #### evaluating cluster

@@ -334,89 +334,89 @@ AnalyzeASVgroup <- function(
     mutate(across(where(is.numeric),function(x) x+0.00000001)) %>% 
     mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) 
   
-  # mds_obj <- cmdscale(d = robCompositions::aDist(dfBiotic_Wider_MDS[,-1]),
-  #                     k = 3,eig = T,add=T)
-  # pct_explained = round(100 * mds_obj$eig/sum(mds_obj$eig),1)
-  # 
-  # dfBiotic_Wider_MDS <- dfBiotic_Wider_MDS %>% mutate(
-  #   MDS1 = mds_obj$points[,1],
-  #   MDS2 = mds_obj$points[,2],
-  #   MDS3 = mds_obj$points[,3]
-  # )
-  # 
-  # dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>% 
-  #   left_join(dfLonger %>% select(ID_Sample,Longhurst_Long) %>% distinct())
-  # 
-  # out$MDS2d_Ait = ggplot(
-  #   data = dfBiotic_Wider_MDS,
-  #   mapping = aes(x=MDS1,y=MDS2,
-  #                 color=Longhurst_Long))+
-  #   geom_point(alpha=0.7,size=3) +
-  #   theme_minimal(base_size = 12) +
-  #   xlab(paste('MDS1 -',pct_explained[1],'%'))+
-  #   ylab(paste('MDS2 -',pct_explained[2],'%'))+
-  #   scale_fill_manual(values = longhurst_colours)+
-  #   theme(legend.position = 'bottom')
-  # 
-  # 
-  # out$MDS2d_Ait_MostAbundant = 
-  #   dfBiotic_Wider_MDS %>% 
-  #   left_join(dfAbioMostAbundant %>% 
-  #               select(ID_Sample,Cluster,RA)) %>% 
-  #   ggplot(
-  #     mapping = aes(x=MDS1,y=MDS2,
-  #                   color=Cluster,size=RA))+
-  #   geom_point(alpha=0.7) +
-  #   theme_minimal() +
-  #   xlab(paste('MDS1 -',pct_explained[1],'%'))+
-  #   ylab(paste('MDS2 -',pct_explained[2],'%'))+
-  #   scale_fill_manual(values = colorASVgs)+
-  #   theme(legend.position = 'bottom')
-  # 
-  # ##### Ordination with bray
-  # dfBiotic_Wider = dfBiotic %>% 
-  #   select(ID_Sample,Cluster,RA) %>%
-  #   pivot_wider(names_from = Cluster,values_from = RA)
-  # 
-  # mds_obj <- cmdscale(d = vegan::vegdist(dfBiotic_Wider[,-1],method = 'bray'),
-  #                     k = 3,eig = T,add=T)
-  # pct_explained = round(100 * mds_obj$eig/sum(mds_obj$eig),1)
-  # 
-  # dfBiotic_Wider <- dfBiotic_Wider %>% mutate(
-  #   MDS1 = mds_obj$points[,1],
-  #   MDS2 = mds_obj$points[,2],
-  #   MDS3 = mds_obj$points[,3]
-  # )
-  # 
-  # dfBiotic_Wider = dfBiotic_Wider %>% 
-  #   left_join(dfLonger %>% select(ID_Sample,Longhurst_Long) %>% distinct())
-  # 
-  # 
-  # out$MDS2d_Bray = ggplot(
-  #   data = dfBiotic_Wider,
-  #   mapping = aes(x=MDS1,y=MDS2,
-  #                 color=Longhurst_Long,
-  #                 label=Longhurst_Long))+
-  #   geom_point(alpha=0.7,size=4) +
-  #   theme_minimal() +
-  #   xlab(paste('MDS1 -',pct_explained[1],'%'))+
-  #   ylab(paste('MDS2 -',pct_explained[2],'%'))+
-  #   scale_fill_manual(values = longhurst_colours)+
-  #   theme(legend.position = 'bottom')
-  # 
-  # out$MDS2d_Bray_MostAbundantdf =
-  #   dfBiotic_Wider %>% 
-  #   left_join(dfAbioMostAbundant %>% 
-  #               select(ID_Sample,Cluster,RA)) %>% 
-  #   ggplot(
-  #     mapping = aes(x=MDS1,y=MDS2,
-  #                   color=Cluster,size=RA))+
-  #   geom_point(alpha=0.7) +
-  #   theme_minimal() +
-  #   xlab(paste('MDS1 -',pct_explained[1],'%'))+
-  #   ylab(paste('MDS2 -',pct_explained[2],'%'))+
-  #   scale_color_manual(values = colorASVgs)+
-  #   theme(legend.position = 'bottom')
+   mds_obj <- cmdscale(d = robCompositions::aDist(dfBiotic_Wider_MDS[,-1]),
+                       k = 3,eig = T,add=T)
+   pct_explained = round(100 * mds_obj$eig/sum(mds_obj$eig),1)
+   
+   dfBiotic_Wider_MDS <- dfBiotic_Wider_MDS %>% mutate(
+     MDS1 = mds_obj$points[,1],
+     MDS2 = mds_obj$points[,2],
+     MDS3 = mds_obj$points[,3]
+   )
+   
+   dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>% 
+     left_join(dfLonger %>% select(ID_Sample,Longhurst_Long) %>% distinct())
+   
+   out$MDS2d_Ait = ggplot(
+     data = dfBiotic_Wider_MDS,
+     mapping = aes(x=MDS1,y=MDS2,
+                   color=Longhurst_Long))+
+     geom_point(alpha=0.7,size=3) +
+     theme_minimal(base_size = 12) +
+     xlab(paste('MDS1 -',pct_explained[1],'%'))+
+     ylab(paste('MDS2 -',pct_explained[2],'%'))+
+     scale_fill_manual(values = longhurst_colours)+
+     theme(legend.position = 'bottom')
+   
+   
+   out$MDS2d_Ait_MostAbundant = 
+     dfBiotic_Wider_MDS %>% 
+     left_join(dfAbioMostAbundant %>% 
+                 select(ID_Sample,Cluster,RA)) %>% 
+     ggplot(
+       mapping = aes(x=MDS1,y=MDS2,
+                     color=Cluster,size=RA))+
+     geom_point(alpha=0.7) +
+     theme_minimal() +
+     xlab(paste('MDS1 -',pct_explained[1],'%'))+
+     ylab(paste('MDS2 -',pct_explained[2],'%'))+
+     scale_fill_manual(values = colorASVgs)+
+     theme(legend.position = 'bottom')
+   
+   ##### Ordination with bray
+   dfBiotic_Wider = dfBiotic %>% 
+     select(ID_Sample,Cluster,RA) %>%
+     pivot_wider(names_from = Cluster,values_from = RA)
+   
+   mds_obj <- cmdscale(d = vegan::vegdist(dfBiotic_Wider[,-1],method = 'bray'),
+                       k = 3,eig = T,add=T)
+   pct_explained = round(100 * mds_obj$eig/sum(mds_obj$eig),1)
+   
+   dfBiotic_Wider <- dfBiotic_Wider %>% mutate(
+     MDS1 = mds_obj$points[,1],
+     MDS2 = mds_obj$points[,2],
+     MDS3 = mds_obj$points[,3]
+   )
+   
+   dfBiotic_Wider = dfBiotic_Wider %>% 
+     left_join(dfLonger %>% select(ID_Sample,Longhurst_Long) %>% distinct())
+   
+   
+   out$MDS2d_Bray = ggplot(
+     data = dfBiotic_Wider,
+     mapping = aes(x=MDS1,y=MDS2,
+                   color=Longhurst_Long,
+                   label=Longhurst_Long))+
+     geom_point(alpha=0.7,size=4) +
+     theme_minimal() +
+     xlab(paste('MDS1 -',pct_explained[1],'%'))+
+     ylab(paste('MDS2 -',pct_explained[2],'%'))+
+     scale_fill_manual(values = longhurst_colours)+
+     theme(legend.position = 'bottom')
+   
+   out$MDS2d_Bray_MostAbundantdf =
+     dfBiotic_Wider %>% 
+     left_join(dfAbioMostAbundant %>% 
+                 select(ID_Sample,Cluster,RA)) %>% 
+     ggplot(
+       mapping = aes(x=MDS1,y=MDS2,
+                     color=Cluster,size=RA))+
+     geom_point(alpha=0.7) +
+     theme_minimal() +
+     xlab(paste('MDS1 -',pct_explained[1],'%'))+
+     ylab(paste('MDS2 -',pct_explained[2],'%'))+
+     scale_color_manual(values = colorASVgs)+
+     theme(legend.position = 'bottom')
   
   #################################################
   ### Plots with the stacked version.
