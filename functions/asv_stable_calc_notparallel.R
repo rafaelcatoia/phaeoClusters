@@ -55,21 +55,19 @@ asv_stable_calc_notparallel <- function(
     
     ##### creating the mixture of distance matrices 
     if(!is.null(splittingInducerMatrix)){
-      aitDist_fit <- (1-alpha_) * as.matrix(aitDist_fit) + alpha_*as.matrix(splittingInducerMatrix)
+      norm_fit <- (1-alpha_) * as.matrix(norm_fit) + alpha_*as.matrix(splittingInducerMatrix)
     }
     
     hclust_obj <- cbind.data.frame(ASV = vet_asv_names,
-                                   cluster_id=cutree(hclust(d = as.dist(aitDist_fit) ,method = 'ward.D'),k=nclust))
+                                   cluster_id=cutree(hclust(d = as.dist(norm_fit) ,method = 'ward.D'),k=nclust))
     
     pam_obj <- cbind.data.frame(ASV = vet_asv_names,
-                                cluster_id = cluster::pam(x = as.dist(aitDist_fit),k = nclust, cluster.only=TRUE))
+                                cluster_id = cluster::pam(x = as.dist(norm_fit),k = nclust, cluster.only=TRUE))
     
     output_hclust =  output_hclust + dist_given_cluster(hclust_obj)
     # output_hclust[1:5,1:5]
     output_pam = output_pam + dist_given_cluster(pam_obj)
     # output_pam[1:5,1:5]
-    
-
   }
   return(
     list(hclust_ = output_hclust/B,pam_=output_pam/B)

@@ -302,7 +302,11 @@ eval_clusters_full = bind_rows(
 ```
 
 ```{r}
-eval_clusters_full %>% select(nclust,alpha,method,ratio_avg_within_between,ratio_avg_max_min) %>% 
+#| fig-width: 12
+#| fig-height: 6
+#| fig-align: center
+
+eval_clusters_full %>% select(nclust,alpha,method,ratio_avg_within_between) %>% 
   filter(nclust>3) %>% mutate(alpha=factor(alpha,ordered = T,labels = c(0,0.10,0.25,0.50))) %>% 
   pivot_longer(cols = -c(1,2,3),names_to = 'metric') %>%
   ggplot(aes(x = nclust, y = value,col=method,linetype=alpha)) +
@@ -311,10 +315,38 @@ eval_clusters_full %>% select(nclust,alpha,method,ratio_avg_within_between,ratio
     facet_wrap(~metric, scales = "free_y")+
   theme(legend.position = 'bottom')+
   geom_vline(xintercept = 12, linetype="dotted", 
-                color = "blue")
+                color = "blue")+
+  geom_vline(xintercept = 22, linetype="dotted", 
+                color = "red")
+```
+```{r}
+#| fig-width: 12
+#| fig-height: 6
+#| fig-align: center
+
+eval_clusters_full %>% select(
+  nclust,alpha,method,
+  mean_avg_within,
+  avg_between_medoids
+  ,ratio_avg_within_between) %>% 
+  filter(nclust>3) %>% mutate(alpha=factor(alpha,ordered = T,labels = c(0,0.10,0.25,0.50))) %>% 
+  pivot_longer(cols = -c(1,2,3),names_to = 'metric') %>%
+  ggplot(aes(x = nclust, y = value,col=method,linetype=alpha)) +
+  geom_line() +
+  theme_minimal(base_size = 12) +
+  facet_wrap(~metric, scales = "free_y")+
+  theme(legend.position = 'bottom')+
+  geom_vline(xintercept = 12, linetype="dotted", 
+             color = "blue")+
+  geom_vline(xintercept = 22, linetype="dotted", 
+             color = "red")
 ```
 
 ```{r}
+#| fig-width: 12
+#| fig-height: 6
+#| fig-align: center
+
 eval_clusters_full %>% select(nclust,alpha,method,avg_max_dist_within,
                               avg_min_dist_clust_i_other,ratio_avg_max_min) %>% 
   filter(nclust>3) %>% mutate(alpha=factor(alpha,ordered = T,labels = c(0,0.10,0.25,0.50))) %>% 
@@ -326,6 +358,9 @@ eval_clusters_full %>% select(nclust,alpha,method,avg_max_dist_within,
 ```
 
 # Splitting and Evaluating Metrics
+::: panel-tabset
+
+## Varying Alpha
 
 ```{r}
 cv_clustering <- readRDS(paste0(savingdir,'/','cv_clustering'))
@@ -340,28 +375,60 @@ group_S = c('ratio_avg_within_between','mean_avg_within','avg_between_medoids')
 group_max = c('max_max_dist_within','avg_max_dist_within','max_min_dist_clust_i_other',
               'avg_min_dist_clust_i_other')
 
-cv_clustering_df %>%
-  mutate(alpha=factor(alpha0,ordered = T,labels = c('0.00','0.10','0.25','0.50'))) %>% 
+cv_clustering_df_longer = cv_clustering_df %>%
+  mutate(alpha=factor(alpha0,ordered = T,
+                      labels = c('0.00','0.10','0.25','0.50'))) %>% 
   reshape2::melt(id.vars = c("nclust","method","iteration",'alpha') ) %>%
-  filter(nclust > 2) %>% 
+  filter(nclust > 3) %>% 
   select(-iteration) %>% 
-  filter(variable %in% group_summary) %>% 
   group_by(method,nclust,variable,alpha) %>% 
   summarise(avg=mean(value),stdev=sd(value)) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = nclust, y = avg,group=alpha,color=alpha,fill=alpha),alpha=0.1) +
+  ungroup()
+  
+cv_clustering_df_longer %>%
+  filter(variable %in% group_summary[1]) %>% 
+  ggplot(aes(x = nclust, y = avg,group=method,color=method,fill=method),alpha=0.1) +
   geom_line(aes(linetype=alpha)) +
-#  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.25)+
+  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.25)+
   theme_minimal(base_size = 16) +
-  facet_grid(method~variable, scales = "free_y")+
+  facet_grid(method~alpha, scales = "free_y")+
   theme(legend.position = 'bottom')+
-  scale_color_discrete()
+  scale_color_discrete()+
+  geom_vline(xintercept = 12, linetype="dotted", 
+             color = "blue")+
+  geom_vline(xintercept = 22, linetype="dotted", 
+             color = "red")
 ```
 
 
-::: panel-tabset
-## Calculating
+I would pick 22 as the best number of clusters. 
 
+```{r}
+cv_clustering_df_longer %>%
+  filter(variable %in% group_summary[2]) %>% 
+  filter(nclust>5) %>% 
+  ggplot(aes(x = nclust, y = avg,group=method,
+             color=method,fill=method),alpha=0.1) +
+  geom_line(aes(linetype=alpha)) +
+  geom_ribbon(aes(ymin=avg-stdev, ymax=avg+stdev),alpha=0.25)+
+  theme_minimal(base_size = 16) +
+  facet_grid(method~alpha, scales = "free_y")+
+  theme(legend.position = 'bottom')+
+  scale_color_discrete()+
+  geom_vline(xintercept = 15, linetype="dotted", 
+             color = "blue")+
+  geom_vline(xintercept = 22, linetype="dotted", 
+             color = "red")
+```
+
+Here 15 feels like the best choice for the number of clusters. 
+
+
+## Previous results
+
+With mosaic
+
+### Code 
 Here you will only find the scripts to generate the results
 
 ```{r}
@@ -458,9 +525,10 @@ alpha0_cv = readRDS(paste0(savingdir,'/','alpha0_bootstrap'))
 alpha0_cv_df = data.table::rbindlist(alpha0_cv) %>% data.frame()
 ```
 
-## Results
+### Results 
 
 ::: panel-tabset
+
 ### Proposed Metrics
 
 'CV-like' measurement was calculated at 500 iterations of:
@@ -726,88 +794,20 @@ df_perm %>% filter(nclust>1) %>%
 
 ## Calculating
 ```{r}
-######## --- stable with alpha = 0 
-######## --- here is the script if you want to run it parallellized
-######## --- the caviat is that it uses too much memory - needs better implementation
-running=F 
-if(running){
-  stable_obj_alpha0 <- asv_stable_calc(
-    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=500,
-    split_pct = 0.8,
-    nclust=10,
-    vec_functions_fromEnv=funcitons_parallel,
-    splittingInducerMatrix=NULL
-  )
-}
-
-######## --- stable with alpha = 0.1
-if(running){
-  stable_obj_alpha0.10 <- asv_stable_calc(
-    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=500,
-    split_pct = 0.8,
-    nclust=10,
-    vec_functions_fromEnv=funcitons_parallel,
-    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.1)
-  saveRDS(object = stable_obj_alpha0.10,
-          file = paste0(savingdir,'/','stable_obj_alpha0.10'))
-}
-
-######## --- stable with alpha = 0.25
-if(running){
-  stable_obj_alpha0.25 <- asv_stable_calc(
-    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=500,
-    split_pct = 0.8,
-    nclust=10,
-    vec_functions_fromEnv=funcitons_parallel,
-    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.25)
-  saveRDS(object = stable_obj_alpha0.25,
-          file = paste0(savingdir,'/','stable_obj_alpha0.25'))
-}
-
-######## --- here is the script for running it not parellized
-running=F 
-if(running){
-  stable_obj_alpha0 <- asv_stable_calc_notparallel(
-    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=500,
-    split_pct = 0.8,
-    nclust=10,
-    splittingInducerMatrix=NULL
-  )
-}
-
-######## --- stable with alpha = 0.1
-if(running){
-  stable_obj_alpha0.10 <- asv_stable_calc_notparallel(
-    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=500,
-    split_pct = 0.8,
-    nclust=10,
-    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.1)
-  saveRDS(object = stable_obj_alpha0.10,
-          file = paste0(savingdir,'/','stable_obj_alpha0.10'))
-}
-
-######## --- stable with alpha = 0.25
-if(running){
-  stable_obj_alpha0.25 <- asv_stable_calc_notparallel(
-    dframe_asv=dframe$dframe %>% select(SampleKey,ASV_name,Raw.Sequence.Counts),
-    B=500,
-    split_pct = 0.8,
-    nclust=10,
-    splittingInducerMatrix=inducedDist_$normalizedMyDist,alpha_ = 0.25)
-  saveRDS(object = stable_obj_alpha0.25,
-          file = paste0(savingdir,'/','stable_obj_alpha0.25'))
-}
-
-######
 stable_obj_alpha0= readRDS(paste0(savingdir,'/','stable_obj_alpha0'))
 stable_obj_alpha0.10= readRDS(paste0(savingdir,'/','stable_obj_alpha0.10'))
 stable_obj_alpha0.25= readRDS(paste0(savingdir,'/','stable_obj_alpha0.25'))
 stable_obj_alpha0.50= readRDS(paste0(savingdir,'/','stable_obj_alpha0.50'))
+
+stable_obj_alpha0_n22 = readRDS(paste0(savingdir,'/','stable_obj_alpha0_n22'))
+stable_obj_alpha0.10_n22= readRDS(paste0(savingdir,'/','stable_obj_alpha0.10_n22'))
+stable_obj_alpha0.25_n22= readRDS(paste0(savingdir,'/','stable_obj_alpha0.25_n22'))
+stable_obj_alpha0.50_n22= readRDS(paste0(savingdir,'/','stable_obj_alpha0.50_n22'))
+
+pmatrix_a0 <- reorder_to_matrix_plot(stable_obj_alpha0_n22)
+pmatrix_a0.10 <- reorder_to_matrix_plot(stable_obj_alpha0.10_n22)
+pmatrix_a0.25 <- reorder_to_matrix_plot(stable_obj_alpha0.25_n22)
+pmatrix_a0.50 <- reorder_to_matrix_plot(stable_obj_alpha0.50_n22)
 ```
 
 ## Results
@@ -821,17 +821,19 @@ stable_obj_alpha0.50= readRDS(paste0(savingdir,'/','stable_obj_alpha0.50'))
 #### All ASVs
 
 ```{r}
-#| fig-width: 15
-#| fig-height: 15
-#| layout-ncol: 4
+#| fig-width: 4
+#| fig-height: 4
+#| fig-align: center
+#| layout-ncol: 2
+#| layout-nrow: 2
 
 pallete10 <- colorRampPalette(c('white','purple'))(10)
 #pallete10 = c("#FFFFFF",pallete10)
 
-hclus_0 <- stable_obj_alpha0$hclust_#[1:250,1:250]
-hclus_0.10 <- stable_obj_alpha0.10$hclust_#[1:250,1:250]
-hclus_0.25 <- stable_obj_alpha0.25$hclust_#[1:250,1:250]
-hclus_0.50 <- stable_obj_alpha0.50$hclust_#[1:250,1:250]
+hclus_0 <- stable_obj_alpha0_n22$hclust_
+hclus_0.10 <- stable_obj_alpha0.10_n22$hclust_
+hclus_0.25 <- stable_obj_alpha0.25_n22$hclust_
+hclus_0.50 <- stable_obj_alpha0.50_n22$hclust_
 
 
 dm = ggdendroplot::hmReady(df = hclus_0) %>% mutate(simm=cut(value,ordered_result = T,
@@ -847,13 +849,15 @@ dm4 = ggdendroplot::hmReady(df = hclus_0.50) %>% mutate(simm=cut(value,ordered_r
                  breaks = seq(0,1,0.1),include.lowest = T,right = T))
 
 p1 = dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
- geom_tile() + 
- theme_minimal() +
- theme(
-   axis.text.x = element_blank(),
-   axis.text.y = element_blank(),
-   axis.ticks = element_blank())+
- scale_fill_manual(values = pallete10)
+  geom_tile() + 
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank())+
+  scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0')
+  
 
 p2 = dm2 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
  geom_tile() + 
@@ -862,7 +866,8 @@ p2 = dm2 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) +
    axis.text.x = element_blank(),
    axis.text.y = element_blank(),
    axis.ticks = element_blank())+
- scale_fill_manual(values = pallete10)
+ scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0.1')
 
 p3 = dm3 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
  geom_tile() + 
@@ -871,7 +876,8 @@ p3 = dm3 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) +
    axis.text.x = element_blank(),
    axis.text.y = element_blank(),
    axis.ticks = element_blank())+
- scale_fill_manual(values = pallete10)
+ scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0.25')
 
 p4 = dm4 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
  geom_tile() + 
@@ -880,137 +886,148 @@ p4 = dm4 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) +
    axis.text.x = element_blank(),
    axis.text.y = element_blank(),
    axis.ticks = element_blank())+
- scale_fill_manual(values = pallete10)
+ scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0.50')
+
+p1
+p2
+p3
+p4
+```
+
+Now reordering
+
+```{r}
+#| fig-width: 4
+#| fig-height: 4
+#| fig-align: center
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+pallete10 <- colorRampPalette(c('white','purple'))(10)
+#pallete10 = c("#FFFFFF",pallete10)
+
+pmatrix_a0$p_hclust
+pmatrix_a0.10$p_hclust
+pmatrix_a0.25$p_hclust
+pmatrix_a0.50$p_hclust
 ```
 
 
 ```{r}
-#| fig-width: 15
-#| fig-height: 3
-#| layout-ncol: 3
-# p1 = dm %>%
-#   group_by(simm) %>% 
-#   summarise(Pct = n()/nrow(dm)) %>%
-#   ggplot(aes(x=simm,y=Pct))+
-#   geom_col()+
-#   theme_minimal()
-#   
-# p2 = dm2 %>%
-#   group_by(simm) %>% 
-#   summarise(Pct = n()/nrow(dm)) %>%
-#   ggplot(aes(x=simm,y=Pct))+
-#   geom_col()+
-#   theme_minimal()
-# 
-# p3 = dm3 %>%
-#   group_by(simm) %>% 
-#   summarise(Pct = n()/nrow(dm)) %>%
-#   ggplot(aes(x=simm,y=Pct))+
-#   geom_col()+
-#   theme_minimal()
-# 
-# gridExtra::grid.arrange(p1,p2,p3,ncol=3)
+#| fig-width: 20
+#| fig-height: 5
+#| fig-align: center
+p1 = dm %>%
+  group_by(simm) %>% 
+  summarise(Pct = n()/nrow(dm)) %>%
+  ggplot(aes(x=simm,y=Pct))+
+  geom_col()+
+  theme_minimal()+
+  ggtitle('alpha=0')
+  
+p2 = dm2 %>%
+  group_by(simm) %>% 
+  summarise(Pct = n()/nrow(dm)) %>%
+  ggplot(aes(x=simm,y=Pct))+
+  geom_col()+
+  theme_minimal()+
+  ggtitle('alpha=0.1')
+
+p3 = dm3 %>%
+  group_by(simm) %>% 
+  summarise(Pct = n()/nrow(dm)) %>%
+  ggplot(aes(x=simm,y=Pct))+
+  geom_col()+
+  theme_minimal()+
+  ggtitle('alpha=0.25')
+
+p4 = dm4 %>%
+  group_by(simm) %>% 
+  summarise(Pct = n()/nrow(dm)) %>%
+  ggplot(aes(x=simm,y=Pct))+
+  geom_col()+
+  theme_minimal()+
+  ggtitle('alpha=0.50')
+
+gridExtra::grid.arrange(p1,p2,p3,p4,ncol=4)
 ```
 
 Let's reorder to get a better visualization.
 
-```{r}
-# asv_names_ <- rownames(hclus_0)
-# hclus_0_cut_obj <- hclust(d=as.dist(1-hclus_0),method = 'ward.D')
-# #plot(hclus_0_cut_obj,labels = F)
-# hclus_0_cut = data.frame(
-#   asv_names = asv_names_,
-#   clusterCluster = cutree(hclus_0_cut_obj,k = 11))
-# 
-# hclus_0_cut = hclus_0_cut %>% arrange(clusterCluster)
-# order_asv2 <- hclus_0_cut$asv_names
-# 
-# dm = ggdendroplot::hmReady(df = hclus_0) %>%
-#   mutate(simm=cut(value,ordered_result = T,breaks = seq(0,1,0.1),include.lowest = T,right = F)) %>% 
-#   mutate(rowid=factor(rowid,labels =order_asv2),
-#          variable=factor(variable,labels = order_asv2)) %>% 
-#   arrange(rowid,variable)
-# 
-# dm2 = ggdendroplot::hmReady(df = hclus_0.10) %>% mutate(simm=cut(value,ordered_result = T,
-#                   breaks = seq(0,1,0.1),include.lowest = T,right = F))
-# 
-# dm3 = ggdendroplot::hmReady(df = hclus_0.25) %>% mutate(simm=cut(value,ordered_result = T,
-#                   breaks = seq(0,1,0.1),include.lowest = T,right = F))
-# 
-# dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-# 
-# dm2 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-# 
-# dm3 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-
-### only this one worked!
-# hm_0 <- heatmap.2(x = hclus_0,trace='none',
-#                 col = colorRampPalette(c('white','orange','darkblue'))(10),
-#                 breaks = seq(0,1,length.out=11),dendrogram = 'none')
-
-```
-
 #### Labeled vs Labeled
 ```{r}
-# df_asv_species = dframe$ASV_composition %>% transmute(ASV_name=name) %>% 
-#   left_join(dframe$dframe %>% select(ASV_name,Species) %>% distinct()) %>% 
-#   filter(!is.na(Species)) %>% 
-#   arrange(Species)
-# 
-# asv_glob <- df_asv_species %>% filter(Species=='Phaeocystis_globosa') %>% select(ASV_name) %>% pull()
-# asv_pouchetii <- df_asv_species %>% filter(Species=='Phaeocystis_pouchetii') %>% select(ASV_name) %>% pull()
-# asv_rex <- df_asv_species %>% filter(Species=='Phaeocystis_rex') %>% select(ASV_name) %>% pull()
-# asv_cordata <- df_asv_species %>% filter(Species=='Phaeocystis_cordata') %>% select(ASV_name) %>% pull()
-# asv_antarctica <- df_asv_species %>% filter(Species=='Phaeocystis_antarctica') %>% select(ASV_name) %>% pull()
-# 
-# df_asv_species$ASV_name
-# 
-# df_test <- dm2 %>% filter(rowid%in%df_asv_species$ASV_name,
-#               variable%in%df_asv_species$ASV_name)
-# df_test$rowid <- factor(df_test$rowid, levels = df_asv_species$ASV_name, ordered = T)
-# df_test$variable <- factor(df_test$variable, levels = df_asv_species$ASV_name, ordered = T)
-# df_test %>% 
-#   #left_join(df_asv_species %>% rename('rowid'=1,'species1'=2)) %>% 
-#   #left_join(df_asv_species %>% rename('variable'=1,'species2'=2)) %>% 
-#   #arrange(species1,species2) %>% 
-#   #mutate(rowid=factor(rowid,ordered = T,labels = df_asv_species$ASV_name),
-#   #       variable=factor(variable,ordered = T,labels = df_asv_species$ASV_name)) %>% 
-#   ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   # theme(
-#   #   axis.text.x = element_blank(),
-#   #   axis.text.y = element_blank(),
-#   #   axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-# 
-# 
-# 
+df_asv_species = dframe$ASV_composition %>% transmute(ASV_name=name) %>% 
+   left_join(dframe$dframe %>% select(ASV_name,Species) %>% distinct()) %>% 
+   filter(!is.na(Species)) %>% 
+   arrange(Species)
+
+df_asv_species %>% group_by(Species) %>% 
+  summarise(Freq=n()) %>% mutate(Cumm_Freq = cumsum(Freq)) %>%
+  knitr::kable() %>% kableExtra::kable_styling()
 ```
 
 
+```{r}
+#| fig-width: 4
+#| fig-height: 4
+#| fig-align: center
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+p1 <- plot_knowns_matrix(dm_aux = dm,df_ordered_ASVs = df_asv_species) + ggtitle('alpha=0')
+p2 <- plot_knowns_matrix(dm_aux = dm2,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.10')
+p3 <- plot_knowns_matrix(dm_aux = dm3,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.25')
+p4 <- plot_knowns_matrix(dm_aux = dm4,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.50')
+
+# p_all <- ggpubr::ggarrange(p1,p2,p3,p4,common.legend = T,ncol=2,nrow=2)
+# p_all
+p1
+p2
+p3
+p4
+```
+
 #### Labeled vs unlabeled
+
+```{r}
+#| fig-width: 20
+#| fig-height: 4
+#| fig-align: center
+#| layout-nrow: 4
+p1 <- plot_knowns_vs_unknowns(dm_aux = dm,df_ordered_ASVs = df_asv_species) + ggtitle('alpha=0')
+p2 <- plot_knowns_vs_unknowns(dm_aux = dm2,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.10')
+p3 <- plot_knowns_vs_unknowns(dm_aux = dm3,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.25')
+p4 <- plot_knowns_vs_unknowns(dm_aux = dm4,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.50')
+
+p1
+p2
+p3
+p4
+```
+```{r}
+#| fig-width: 20
+#| fig-height: 4
+#| fig-align: center
+#| layout-nrow: 4
+vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[3]))
+```
 
 :::
 
@@ -1020,183 +1037,215 @@ Let's reorder to get a better visualization.
 #### All ASVs
 
 ```{r}
-#| fig-width: 15
-#| fig-height: 5
-#| layout-ncol: 3
+#| fig-width: 4
+#| fig-height: 4
+#| fig-align: center
+#| layout-ncol: 2
+#| layout-nrow: 2
 
-# pallete10 <- colorRampPalette(c('white','purple'))(10)
-# #pallete10 = c("#FFFFFF",pallete10)
-# 
-# hclus_0 <- stable_obj_alpha0$pam_#[1:250,1:250]
-# hclus_0.10 <- stable_obj_alpha0.10$pam_#[1:250,1:250]
-# hclus_0.25 <- stable_obj_alpha0.25$pam_#[1:250,1:250]
-# 
-# dm = ggdendroplot::hmReady(df = hclus_0) %>% mutate(simm=cut(value,ordered_result = T,
-#                   breaks = seq(0,1,0.1),include.lowest = T,right = T))
-# 
-# dm2 = ggdendroplot::hmReady(df = hclus_0.10) %>% mutate(simm=cut(value,ordered_result = T,
-#                   breaks = seq(0,1,0.1),include.lowest = T,right = T))
-# 
-# dm3 = ggdendroplot::hmReady(df = hclus_0.25) %>% mutate(simm=cut(value,ordered_result = T,
-#                   breaks = seq(0,1,0.1),include.lowest = T,right = T))
-# 
-# 
-# dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-# 
-# dm2 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-# 
-# dm3 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.text.y = element_blank(),
-#     axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
+pallete10 <- colorRampPalette(c('white','purple'))(10)
+#pallete10 = c("#FFFFFF",pallete10)
+
+hclus_0 <- stable_obj_alpha0_n22$pam_
+hclus_0.10 <- stable_obj_alpha0_n22$pam_
+hclus_0.25 <- stable_obj_alpha0_n22$pam_
+hclus_0.50 <- stable_obj_alpha0_n22$pam_
+
+
+dm = ggdendroplot::hmReady(df = hclus_0) %>% mutate(simm=cut(value,ordered_result = T,
+                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+
+dm2 = ggdendroplot::hmReady(df = hclus_0.10) %>% mutate(simm=cut(value,ordered_result = T,
+                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+
+dm3 = ggdendroplot::hmReady(df = hclus_0.25) %>% mutate(simm=cut(value,ordered_result = T,
+                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+
+dm4 = ggdendroplot::hmReady(df = hclus_0.50) %>% mutate(simm=cut(value,ordered_result = T,
+                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+
+p1 = dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
+  geom_tile() + 
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank())+
+  scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0')
+  
+
+p2 = dm2 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
+ geom_tile() + 
+ theme_minimal() +
+ theme(
+   axis.text.x = element_blank(),
+   axis.text.y = element_blank(),
+   axis.ticks = element_blank())+
+ scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0.1')
+
+p3 = dm3 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
+ geom_tile() + 
+ theme_minimal() +
+ theme(
+   axis.text.x = element_blank(),
+   axis.text.y = element_blank(),
+   axis.ticks = element_blank())+
+ scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0.25')
+
+p4 = dm4 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
+ geom_tile() + 
+ theme_minimal() +
+ theme(
+   axis.text.x = element_blank(),
+   axis.text.y = element_blank(),
+   axis.ticks = element_blank())+
+ scale_fill_manual(values = pallete10)+
+  ggtitle('alpha=0.50')
+
+p1
+p2
+p3
+p4
 ```
 
+Now reordering
 
 ```{r}
-#| fig-width: 15
-#| fig-height: 3
-#| layout-ncol: 3
+#| fig-width: 4
+#| fig-height: 4
+#| fig-align: center
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+pallete10 <- colorRampPalette(c('white','purple'))(10)
+#pallete10 = c("#FFFFFF",pallete10)
+
+pmatrix_a0$p_pam
+pmatrix_a0.10$p_pam
+pmatrix_a0.25$p_pam
+pmatrix_a0.50$p_pam
+```
+
+```{r}
+#| fig-width: 20
+#| fig-height: 5
+#| fig-align: center
 p1 = dm %>%
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
   geom_col()+
-  theme_minimal()
+  theme_minimal()+
+  ggtitle('alpha=0')
   
 p2 = dm2 %>%
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
   geom_col()+
-  theme_minimal()
+  theme_minimal()+
+  ggtitle('alpha=0.1')
 
 p3 = dm3 %>%
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
   geom_col()+
-  theme_minimal()
+  theme_minimal()+
+  ggtitle('alpha=0.25')
 
-gridExtra::grid.arrange(p1,p2,p3,ncol=3)
+p4 = dm4 %>%
+  group_by(simm) %>% 
+  summarise(Pct = n()/nrow(dm)) %>%
+  ggplot(aes(x=simm,y=Pct))+
+  geom_col()+
+  theme_minimal()+
+  ggtitle('alpha=0.50')
+
+
+gridExtra::grid.arrange(p1,p2,p3,p4,ncol=4)
 ```
 
 Let's reorder to get a better visualization.
 
-```{r}
-#.  asv_names_ <- rownames(hclus_0)
-#.  hclus_0_cut_obj <- hclust(d=as.dist(1-hclus_0),method = 'ward.D')
-#.  #plot(hclus_0_cut_obj,labels = F)
-#.  hclus_0_cut = data.frame(
-#.    asv_names = asv_names_,
-#.    clusterCluster = cutree(hclus_0_cut_obj,k = 11))
-#.  
-#.  hclus_0_cut = hclus_0_cut %>% arrange(clusterCluster)
-#.  order_asv2 <- hclus_0_cut$asv_names
-#.  
-#.  dm = ggdendroplot::hmReady(df = hclus_0) %>%
-#.    mutate(simm=cut(value,ordered_result = T,breaks = seq(0,1,0.1),include.lowest = T,right = F)) %>% 
-#.    mutate(rowid=factor(rowid,labels =order_asv2),
-#.           variable=factor(variable,labels = order_asv2)) %>% 
-#.    arrange(rowid,variable)
-#.  
-#.  dm2 = ggdendroplot::hmReady(df = hclus_0.10) %>% mutate(simm=cut(value,ordered_result = T,
-#.                    breaks = seq(0,1,0.1),include.lowest = T,right = F))
-#.  
-#.  dm3 = ggdendroplot::hmReady(df = hclus_0.25) %>% mutate(simm=cut(value,ordered_result = T,
-#.                    breaks = seq(0,1,0.1),include.lowest = T,right = F))
-#.  
-#.  dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#.    geom_tile() + 
-#.    theme_minimal() +
-#.    theme(
-#.      axis.text.x = element_blank(),
-#.      axis.text.y = element_blank(),
-#.      axis.ticks = element_blank())+
-#.    scale_fill_manual(values = pallete10)
-#.  
-#.  dm2 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#.    geom_tile() + 
-#.    theme_minimal() +
-#.    theme(
-#.      axis.text.x = element_blank(),
-#.      axis.text.y = element_blank(),
-#.      axis.ticks = element_blank())+
-#.    scale_fill_manual(values = pallete10)
-#.  
-#.  dm3 %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#.    geom_tile() + 
-#.    theme_minimal() +
-#.    theme(
-#.      axis.text.x = element_blank(),
-#.      axis.text.y = element_blank(),
-#.      axis.ticks = element_blank())+
-#.    scale_fill_manual(values = pallete10)
-#.  
-#.  ### only this one worked!
-#.  # hm_0 <- heatmap.2(x = hclus_0,trace='none',
-#.  #                 col = colorRampPalette(c('white','orange','darkblue'))(10),
-#.  #                 breaks = seq(0,1,length.out=11),dendrogram = 'none')
-#.  
-```
-
 #### Labeled vs Labeled
 ```{r}
-# df_asv_species = dframe$ASV_composition %>% transmute(ASV_name=name) %>% 
-#   left_join(dframe$dframe %>% select(ASV_name,Species) %>% distinct()) %>% 
-#   filter(!is.na(Species)) %>% 
-#   arrange(Species)
-# 
-# asv_glob <- df_asv_species %>% filter(Species=='Phaeocystis_globosa') %>% select(ASV_name) %>% pull()
-# asv_pouchetii <- df_asv_species %>% filter(Species=='Phaeocystis_pouchetii') %>% select(ASV_name) %>% pull()
-# asv_rex <- df_asv_species %>% filter(Species=='Phaeocystis_rex') %>% select(ASV_name) %>% pull()
-# asv_cordata <- df_asv_species %>% filter(Species=='Phaeocystis_cordata') %>% select(ASV_name) %>% pull()
-# asv_antarctica <- df_asv_species %>% filter(Species=='Phaeocystis_antarctica') %>% select(ASV_name) %>% pull()
-# 
-# df_asv_species$ASV_name
-# 
-# df_test <- dm3 %>% filter(rowid%in%df_asv_species$ASV_name,
-#               variable%in%df_asv_species$ASV_name)
-# df_test$rowid <- factor(df_test$rowid, levels = df_asv_species$ASV_name, ordered = T)
-# df_test$variable <- factor(df_test$variable, levels = df_asv_species$ASV_name, ordered = T)
-# df_test %>% 
-#   #left_join(df_asv_species %>% rename('rowid'=1,'species1'=2)) %>% 
-#   #left_join(df_asv_species %>% rename('variable'=1,'species2'=2)) %>% 
-#   #arrange(species1,species2) %>% 
-#   #mutate(rowid=factor(rowid,ordered = T,labels = df_asv_species$ASV_name),
-#   #       variable=factor(variable,ordered = T,labels = df_asv_species$ASV_name)) %>% 
-#   ggplot(aes(x=rowid, y=variable, fill=simm)) + 
-#   geom_tile() + 
-#   theme_minimal() +
-#   # theme(
-#   #   axis.text.x = element_blank(),
-#   #   axis.text.y = element_blank(),
-#   #   axis.ticks = element_blank())+
-#   scale_fill_manual(values = pallete10)
-# 
-# 
-# 
+df_asv_species = dframe$ASV_composition %>% transmute(ASV_name=name) %>% 
+   left_join(dframe$dframe %>% select(ASV_name,Species) %>% distinct()) %>% 
+   filter(!is.na(Species)) %>% 
+   arrange(Species)
+
+df_asv_species %>% group_by(Species) %>% 
+  summarise(Freq=n()) %>% mutate(Cumm_Freq = cumsum(Freq)) %>%
+  knitr::kable() %>% kableExtra::kable_styling()
 ```
 
 
+```{r}
+#| fig-width: 4
+#| fig-height: 4
+#| fig-align: center
+#| layout-nrow: 4
+#| layout-ncol: 4
+
+p1 <- plot_knowns_matrix(dm_aux = dm,df_ordered_ASVs = df_asv_species) + ggtitle('alpha=0')
+p2 <- plot_knowns_matrix(dm_aux = dm2,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.10')
+p3 <- plot_knowns_matrix(dm_aux = dm3,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.25')
+p4 <- plot_knowns_matrix(dm_aux = dm4,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.50')
+
+p1
+p2
+p3
+p4
+```
+
 #### Labeled vs unlabeled
+
+```{r}
+#| fig-width: 20
+#| fig-height: 4
+#| fig-align: center
+#| layout-nrow: 4
+
+p1 <- plot_knowns_vs_unknowns(dm_aux = dm,df_ordered_ASVs = df_asv_species) + ggtitle('alpha=0')
+p2 <- plot_knowns_vs_unknowns(dm_aux = dm2,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.10')
+p3 <- plot_knowns_vs_unknowns(dm_aux = dm3,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.25')
+p4 <- plot_knowns_vs_unknowns(dm_aux = dm4,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.50')
+
+p1
+p2
+p3
+p4
+```
+
+Now just looking at the very specific known groups -- Lets just look at the globosa
+
+```{r}
+#| fig-width: 20
+#| fig-height: 4
+#| fig-align: center
+#| layout-nrow: 4
+vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[3]))
+```
 
 :::
 
@@ -1206,16 +1255,21 @@ Let's reorder to get a better visualization.
 
 # Plots and others 
 
-
-
 ```{r}
-alpha_ = 0.5
+inducedDist_ = inducedDist(
+  dFrame = dframe$dframe,
+  c1 = 1,c2=1000,c3=10,c4=10,
+  compMatrix = dframe$ASV_composition)
+
+alpha_ = 0.25
 combdist=  alpha_*inducedDist_$normalizedMyDist + (1-alpha_)*inducedDist_$normalizedAitDist
-pam_10 = cluster::pam(x = as.dist(combdist),k = 15)
+pam_10 = cluster::pam(x = as.dist(combdist),k = 22)
+hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
 
 df_clusters = data.frame(
   ASV_name=dframe$ASV_composition$name,
   Cluster = pam_10$clustering)
+  #Cluster = hclust22)
 
 asvGroupping <- AnalyzeASVgroup(
   dfLonger = dframe$dframe %>% 
