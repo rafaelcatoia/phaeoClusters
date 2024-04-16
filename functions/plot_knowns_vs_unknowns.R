@@ -1,5 +1,7 @@
 plot_knowns_vs_unknowns <- function(dm_aux,df_ordered_ASVs,specific_species=F){
   
+  pallete10 <- colorRampPalette(c('white','purple4'))(4)
+  
   df_plot <- dm_aux %>% filter(variable%in%df_ordered_ASVs$ASV_name)
   df_plot$variable <- factor(df_plot$variable, levels = df_ordered_ASVs$ASV_name, ordered = T)
   

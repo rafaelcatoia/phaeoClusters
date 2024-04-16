@@ -1,5 +1,7 @@
 plot_knowns_matrix <- function(dm_aux,df_ordered_ASVs){
   
+  pallete10 <- colorRampPalette(c('white','purple4'))(4)
+  
   df_plot <- dm_aux %>% filter(rowid%in%df_ordered_ASVs$ASV_name,
                  variable%in%df_ordered_ASVs$ASV_name)
   df_plot$rowid <- factor(df_plot$rowid, levels = df_ordered_ASVs$ASV_name, ordered = T)

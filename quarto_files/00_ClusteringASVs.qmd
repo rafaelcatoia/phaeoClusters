@@ -10,7 +10,7 @@ format:
     fig-dpi: 100
     warning: false
     message: false
-    page-layout: full
+    page-layout: custom
     embed-resources: true
 ---
 
@@ -34,7 +34,6 @@ for( i in 1:length(files_vec)){
   source(root$find_file(paste0(funsdir,'/',files_vec[i])))
 }
 
-getwd()
 funcitons_parallel = c("clusterize_ward_pam",
                        "eval_adist_clustering",
                        "inducedDist",
@@ -821,13 +820,13 @@ pmatrix_a0.50 <- reorder_to_matrix_plot(stable_obj_alpha0.50_n22)
 #### All ASVs
 
 ```{r}
-#| fig-width: 4
+#| fig-width: 6
 #| fig-height: 4
 #| fig-align: center
 #| layout-ncol: 2
 #| layout-nrow: 2
 
-pallete10 <- colorRampPalette(c('white','purple'))(10)
+pallete10 <- colorRampPalette(c('white','purple4'))(4)
 #pallete10 = c("#FFFFFF",pallete10)
 
 hclus_0 <- stable_obj_alpha0_n22$hclust_
@@ -837,16 +836,16 @@ hclus_0.50 <- stable_obj_alpha0.50_n22$hclust_
 
 
 dm = ggdendroplot::hmReady(df = hclus_0) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 dm2 = ggdendroplot::hmReady(df = hclus_0.10) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 dm3 = ggdendroplot::hmReady(df = hclus_0.25) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 dm4 = ggdendroplot::hmReady(df = hclus_0.50) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 p1 = dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
   geom_tile() + 
@@ -898,14 +897,11 @@ p4
 Now reordering
 
 ```{r}
-#| fig-width: 4
+#| fig-width: 6
 #| fig-height: 4
 #| fig-align: center
 #| layout-ncol: 2
 #| layout-nrow: 2
-
-pallete10 <- colorRampPalette(c('white','purple'))(10)
-#pallete10 = c("#FFFFFF",pallete10)
 
 pmatrix_a0$p_hclust
 pmatrix_a0.10$p_hclust
@@ -969,7 +965,7 @@ df_asv_species %>% group_by(Species) %>%
 
 
 ```{r}
-#| fig-width: 4
+#| fig-width: 6
 #| fig-height: 4
 #| fig-align: center
 #| layout-ncol: 2
@@ -1005,6 +1001,11 @@ p2
 p3
 p4
 ```
+#### Specifics
+::: panel-tabset
+
+##### Antartica
+
 ```{r}
 #| fig-width: 20
 #| fig-height: 4
@@ -1014,20 +1015,28 @@ vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_glob
 
 plot_knowns_vs_unknowns(specific_species = T,
   dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
-    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[3]))
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[1]))
 
 plot_knowns_vs_unknowns(specific_species = T,
   dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
-    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[3]))
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[1]))
 
 plot_knowns_vs_unknowns(specific_species = T,
   dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
-    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[3]))
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[1]))
 
 plot_knowns_vs_unknowns(specific_species = T,
   dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
-    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[3]))
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[1]))
 ```
+##### Cordata
+
+##### Globosa
+
+##### Pouchetii
+
+##### Rex
+:::
 
 :::
 
@@ -1043,26 +1052,26 @@ plot_knowns_vs_unknowns(specific_species = T,
 #| layout-ncol: 2
 #| layout-nrow: 2
 
-pallete10 <- colorRampPalette(c('white','purple'))(10)
+pallete10 <- colorRampPalette(c('white','purple4'))(4)
 #pallete10 = c("#FFFFFF",pallete10)
 
 hclus_0 <- stable_obj_alpha0_n22$pam_
-hclus_0.10 <- stable_obj_alpha0_n22$pam_
-hclus_0.25 <- stable_obj_alpha0_n22$pam_
-hclus_0.50 <- stable_obj_alpha0_n22$pam_
+hclus_0.10 <- stable_obj_alpha0.10_n22$pam_
+hclus_0.25 <- stable_obj_alpha0.25_n22$pam_
+hclus_0.50 <- stable_obj_alpha0.50_n22$pam_
 
 
 dm = ggdendroplot::hmReady(df = hclus_0) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 dm2 = ggdendroplot::hmReady(df = hclus_0.10) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 dm3 = ggdendroplot::hmReady(df = hclus_0.25) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 dm4 = ggdendroplot::hmReady(df = hclus_0.50) %>% mutate(simm=cut(value,ordered_result = T,
-                 breaks = seq(0,1,0.1),include.lowest = T,right = T))
+                 breaks = seq(0,1,0.25),include.lowest = T,right = T))
 
 p1 = dm %>% ggplot(aes(x=rowid, y=variable, fill=simm)) + 
   geom_tile() + 
@@ -1120,7 +1129,7 @@ Now reordering
 #| layout-ncol: 2
 #| layout-nrow: 2
 
-pallete10 <- colorRampPalette(c('white','purple'))(10)
+pallete10 <- colorRampPalette(c('white','purple4'))(4)
 #pallete10 = c("#FFFFFF",pallete10)
 
 pmatrix_a0$p_pam
@@ -1188,8 +1197,8 @@ df_asv_species %>% group_by(Species) %>%
 #| fig-width: 4
 #| fig-height: 4
 #| fig-align: center
-#| layout-nrow: 4
-#| layout-ncol: 4
+#| layout-nrow: 2
+#| layout-ncol: 2
 
 p1 <- plot_knowns_matrix(dm_aux = dm,df_ordered_ASVs = df_asv_species) + ggtitle('alpha=0')
 p2 <- plot_knowns_matrix(dm_aux = dm2,df_ordered_ASVs = df_asv_species) +ggtitle('alpha=0.10')
@@ -1261,10 +1270,10 @@ inducedDist_ = inducedDist(
   c1 = 1,c2=1000,c3=10,c4=10,
   compMatrix = dframe$ASV_composition)
 
-alpha_ = 0.25
+alpha_ = 0.1
 combdist=  alpha_*inducedDist_$normalizedMyDist + (1-alpha_)*inducedDist_$normalizedAitDist
 pam_10 = cluster::pam(x = as.dist(combdist),k = 22)
-hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
+#hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
 
 df_clusters = data.frame(
   ASV_name=dframe$ASV_composition$name,
