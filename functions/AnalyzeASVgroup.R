@@ -108,9 +108,18 @@ AnalyzeASVgroup <- function(
     mutate(Pct=Freq/sum(Freq),Cluster=as.factor(Cluster)) %>% 
     arrange(Cluster,Species)
   
-  out$barplot <- df_freq %>% ggplot(aes(x=Cluster,y=Pct,fill=Species))+
-    geom_col()+coord_flip()+
-    theme_minimal(base_size = 14)+theme(legend.position = 'bottom')
+  out$barplot1 <- df_freq %>% ggplot(aes(x=Cluster,y=Freq,fill=Species))+
+    geom_col()+#coord_flip()+
+    theme_minimal(base_size = 14)+
+    theme(legend.position = 'bottom',
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  
+  out$barplot2 <- df_freq %>% ggplot(aes(x=Cluster,y=Pct,fill=Species))+
+    geom_col()+#coord_flip()+
+    theme_minimal(base_size = 14) +
+    theme(legend.position = 'bottom',
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  
   
   out$Freq <- df_freq %>% pivot_wider(
     id_cols = Species,
@@ -357,7 +366,8 @@ AnalyzeASVgroup <- function(
   #tsneplots
   library(Rtsne)
   set.seed(1234)
-  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2,
+                     perplexity=100, max_iter = 2000,learning=100)
   df_asv_composition$tsne1 = tsneCoords$Y[,1]
   df_asv_composition$tsne2 = tsneCoords$Y[,2]
   
@@ -365,13 +375,14 @@ AnalyzeASVgroup <- function(
     data = df_asv_composition,
     mapping = aes(x=tsne1,y=tsne2,
                   color=Cluster))+
-    geom_point(alpha=0.7,size=3) +
+    geom_point(alpha=0.5,size=3) +
     theme_minimal(base_size = 12)+
     theme(legend.position = 'bottom')+
     ggtitle('AitDist ASV compositions - tsne')
   
   set.seed(1234)
-  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 3)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 3,
+                     perplexity=100, max_iter = 2000,learning=100)
   df_asv_composition$tsne1 = tsneCoords$Y[,1]
   df_asv_composition$tsne2 = tsneCoords$Y[,2]
   df_asv_composition$tsne3 = tsneCoords$Y[,3]
@@ -407,8 +418,9 @@ AnalyzeASVgroup <- function(
   library(umap)
   custom.config <- umap.defaults
   custom.config$n_neighbors=25
-  custom.config$min_dist=0.5
-  custom.config$spread = 1
+  custom.config$min_dist=0.05
+  custom.config$spread = 0.5
+  custom.config$random_state=10
   
   clr_transf <- robCompositions::cenLR(df_asv_composition[,selectcols])
   #test_duplicated = duplicated(clr_transf) there are no duplicates!
@@ -431,13 +443,14 @@ AnalyzeASVgroup <- function(
     data = df_asv_composition,
     mapping = aes(x=umap1,y=umap2,
                   color=Cluster))+
-    geom_point(alpha=0.7,size=3) +
+    geom_point(alpha=0.5,size=3) +
     theme_minimal(base_size = 12)+
     theme(legend.position = 'bottom')+
-    ggtitle('AitDist ASV compositions - umap - n_neighbors=50 - min_dist=0.25-spread = 0.5')
+    ggtitle('AitDist ASV compositions - umap - n_neighbors=50 - min_dist=0.1 -spread = 0.5')
   
   
   custom.config$n_components=3
+  set.seed(1234)
   umap_obj <- umap(d = clr_transf %>% select(-ASV_name,-Cluster),config = custom.config)
   #umap_obj <- umap(d = as.matrix(aitDistHere),input="dist")
   #plot(umap_obj$layout)
@@ -485,8 +498,10 @@ AnalyzeASVgroup <- function(
   
   
   aitDistHere <- robCompositions::aDist(x = dfBiotic_Wider_MDS[,-1])
+  
   set.seed(1234)
-  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2,
+                     perplexity=100, max_iter = 2000,learning=100,)
   dfBiotic_Wider_MDS$tsne1 = tsneCoords$Y[,1]
   dfBiotic_Wider_MDS$tsne2 = tsneCoords$Y[,2]
   dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>%  left_join(
@@ -503,7 +518,8 @@ AnalyzeASVgroup <- function(
     ggtitle('AitDist Sample compositions - tsne')
   
   set.seed(1234)
-  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 3)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 3,
+                     perplexity=100, max_iter = 2000,learning=100)
   dfBiotic_Wider_MDS$tsne1 = tsneCoords$Y[,1]
   dfBiotic_Wider_MDS$tsne2 = tsneCoords$Y[,2]
   dfBiotic_Wider_MDS$tsne3 = tsneCoords$Y[,3]
@@ -537,10 +553,7 @@ AnalyzeASVgroup <- function(
   ###################-------------------------------------------------------------------------
   ##### Umap --------------------------
   ###################-------------------------------------------------------------------------
-  custom.config <- umap.defaults
-  #custom.config$n_neighbors=25
-  custom.config$min_dist=0.5
-  custom.config$spread = 1
+
   clr_transf <- robCompositions::cenLR(x = dfBiotic_Wider_MDS %>% select(starts_with('ASVG_')) %>% data.frame())
   #test_duplicated = duplicated(clr_transf) there are no duplicates!
   #dim(clr_transf$x.clr)
@@ -548,6 +561,11 @@ AnalyzeASVgroup <- function(
     ID_Sample = dfBiotic_Wider_MDS$ID_Sample,
     clr_transf$x.clr)
   
+  custom.config <- umap.defaults
+  custom.config$n_neighbors=25
+  custom.config$min_dist=0.05
+  custom.config$spread = 0.5
+  custom.config$random_state=10
   
   set.seed(1234)
   umap_obj <- umap(d = clr_transf %>% select(-ID_Sample),config = custom.config)
@@ -567,6 +585,7 @@ AnalyzeASVgroup <- function(
   
   
   custom.config$n_components=3
+  set.seed(1234)
   umap_obj <- umap(d = clr_transf %>% select(-ID_Sample),config = custom.config)
   #umap_obj <- umap(d = as.matrix(aitDistHere),input="dist")
   #plot(umap_obj$layout)

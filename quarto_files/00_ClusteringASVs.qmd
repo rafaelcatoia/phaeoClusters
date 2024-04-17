@@ -1455,13 +1455,17 @@ plot_knowns_vs_unknowns(specific_species = T,
 
 # Plots and others 
 
+::: panel-tabset
+
+## pam
+
 ```{r}
 inducedDist_ = inducedDist(
   dFrame = dframe$dframe,
   c1 = 1,c2=1000,c3=10,c4=10,
   compMatrix = dframe$ASV_composition)
 
-alpha_ =  0.25
+alpha_ =  0.1
 combdist=  alpha_*inducedDist_$normalizedMyDist + (1-alpha_)*inducedDist_$normalizedAitDist
 pam_10 = cluster::pam(x = as.dist(combdist),k = 22)
 hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
@@ -1471,7 +1475,6 @@ df_clusters = data.frame(
   Cluster = pam_10$clustering)
   #Cluster = hclust22)
 
-
 asvGroupping <- AnalyzeASVgroup(
   dfLonger = dframe$dframe %>% 
     left_join(df_clusters),
@@ -1480,12 +1483,16 @@ asvGroupping <- AnalyzeASVgroup(
 ```
 
 ::: panel-tabset
-##### ASV vs Species
+### ASV vs Species
 
 Comparing the Species and The groupping that we got:
 
 ```{r}
-asvGroupping$barplot
+#| fig-width: 12
+#| fig-height: 5
+#| layout-ncol: 2
+asvGroupping$barplot1
+asvGroupping$barplot2
 ```
 
 ```{r}
@@ -1496,7 +1503,7 @@ asvGroupping$RelativeFreq
 asvGroupping$Freq
 ```
 
-##### Most abundant ASV in each sample
+### Most abundant ASV in each sample
 
 ```{r}
 asvGroupping$MostAbundantFreq %>% knitr::kable() %>% kableExtra::kable_styling()
@@ -1506,7 +1513,7 @@ asvGroupping$MostAbundantFreq %>% knitr::kable() %>% kableExtra::kable_styling()
 asvGroupping$mapView
 ```
 
-##### ASV groups vs Longhurst - Based on RA
+### ASV groups vs Longhurst - Based on RA
 
 Here, the denominator is the sum of the `raw.sequence.counts` for each longhurst, and than observe the RA of each ASVG inside each longhurst
 
@@ -1520,7 +1527,7 @@ Here, the denominator is the sum of the `raw.sequence.counts` for each ASVG, and
 asvGroupping$BarPlot_ASVG_LH_RA2
 ```
 
-##### Spatial - Most Abundant ASVG
+### Spatial - Most Abundant ASVG
 
 Each sample here is represented by it's most abundant ASV Group.
 
@@ -1536,12 +1543,14 @@ asvGroupping$LatLong
 asvGroupping$DepthLong
 ```
 
-##### Spatial
+### Spatial
 
 If the ASV Groupping is not present, than the point is removed.
 
 ```{r}
-asvGroupping$LatDepth_stacked
+#| fig-width: 12
+#| fig-height: 16
+asvGroupping$LatDepth_stacked + theme(legend.position = '')
 ```
 
 ```{r}
@@ -1552,7 +1561,7 @@ asvGroupping$LatLong_stacked
 asvGroupping$DepthLong_stacked
 ```
 
-##### Abiotic Factors
+### Abiotic Factors
 
 Just to remember the percentage of the data that has missing on the abiotic factors
 
@@ -1577,8 +1586,25 @@ Bivariate
 asvGroupping$MatrixAbioticsBiVar
 ```
 
-##### ASV Tsne
+
+### MDS ASVs
 ```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$MDS2d_ASVs_Ait
+```
+
+### MDS Samples
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$MDS2d_Ait_MostAbundant
+```
+
+### ASV Tsne
+```{r}
+#| fig-width: 12
+#| fig-height: 10
 asvGroupping$TSNE_ASVs_Ait_2d
 ```
 
@@ -1586,8 +1612,10 @@ asvGroupping$TSNE_ASVs_Ait_2d
 asvGroupping$TSNE_ASVs_Ait_3d
 ```
 
-##### ASV umap
+### ASV umap
 ```{r}
+#| fig-width: 12
+#| fig-height: 10
 asvGroupping$umap_ASVs_Ait_2d
 ```
 
@@ -1595,8 +1623,10 @@ asvGroupping$umap_ASVs_Ait_2d
 asvGroupping$umap_ASVs_Ait_3d
 ```
 
-##### Sample Tsne
+### Sample Tsne
 ```{r}
+#| fig-width: 12
+#| fig-height: 10
 asvGroupping$TSNE_Sample_Ait_2d
 ```
 
@@ -1604,8 +1634,10 @@ asvGroupping$TSNE_Sample_Ait_2d
 asvGroupping$TSNE_Sample_Ait_3d
 ```
 
-##### Sample umap
+### Sample umap
 ```{r}
+#| fig-width: 12
+#| fig-height: 10
 asvGroupping$umap_Sample_Ait_2d
 ```
 
@@ -1614,6 +1646,192 @@ asvGroupping$umap_Sample_Ait_3d
 ```
 
 <!--Sub Sub Sec 2 -  Close -->
+:::
+
+
+## hclust
+
+```{r}
+#pam_10 = cluster::pam(x = as.dist(combdist),k = 22)
+hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
+
+df_clusters = data.frame(
+  ASV_name=dframe$ASV_composition$name,
+  Cluster = hclust22)
+
+asvGroupping <- AnalyzeASVgroup(
+  dfLonger = dframe$dframe %>% 
+    left_join(df_clusters),
+  clusterVar = 'Cluster',
+  sampleVar = 'SampleID')
+```
+
+::: panel-tabset
+### ASV vs Species
+
+Comparing the Species and The groupping that we got:
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+#| layout-ncol: 2
+asvGroupping$barplot1
+asvGroupping$barplot2
+```
+
+```{r}
+asvGroupping$RelativeFreq
+```
+
+```{r}
+asvGroupping$Freq
+```
+
+### Most abundant ASV in each sample
+
+```{r}
+asvGroupping$MostAbundantFreq %>% knitr::kable() %>% kableExtra::kable_styling()
+```
+
+```{r}
+asvGroupping$mapView
+```
+
+### ASV groups vs Longhurst - Based on RA
+
+Here, the denominator is the sum of the `raw.sequence.counts` for each longhurst, and than observe the RA of each ASVG inside each longhurst
+
+```{r}
+asvGroupping$BarPlot_ASVG_LH_RA
+```
+
+Here, the denominator is the sum of the `raw.sequence.counts` for each ASVG, and than observe the RA of each longhurst inside each ASVG
+
+```{r}
+asvGroupping$BarPlot_ASVG_LH_RA2
+```
+
+### Spatial - Most Abundant ASVG
+
+Each sample here is represented by it's most abundant ASV Group.
+
+```{r}
+asvGroupping$LatDepth
+```
+
+```{r}
+asvGroupping$LatLong
+```
+
+```{r}
+asvGroupping$DepthLong
+```
+
+### Spatial
+
+If the ASV Groupping is not present, than the point is removed.
+
+```{r}
+#| fig-width: 12
+#| fig-height: 16
+asvGroupping$LatDepth_stacked + theme(legend.position = '')
+```
+
+```{r}
+asvGroupping$LatLong_stacked
+```
+
+```{r}
+asvGroupping$DepthLong_stacked
+```
+
+### Abiotic Factors
+
+Just to remember the percentage of the data that has missing on the abiotic factors
+
+```{r}
+asvGroupping$MissingAbiotic
+```
+
+I'm just plotting the samples for which we have information.
+
+Univariate
+
+```{r}
+#| fig-height: 12
+asvGroupping$MatrixAbioticsUnivar
+```
+
+Bivariate
+
+```{r}
+#| fig-height: 16
+#| fig-width: 16
+asvGroupping$MatrixAbioticsBiVar
+```
+
+
+### MDS ASVs
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$MDS2d_ASVs_Ait
+```
+
+### MDS Samples
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$MDS2d_Ait_MostAbundant
+```
+
+### ASV Tsne
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$TSNE_ASVs_Ait_2d
+```
+
+```{r}
+asvGroupping$TSNE_ASVs_Ait_3d
+```
+
+### ASV umap
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$umap_ASVs_Ait_2d
+```
+
+```{r}
+asvGroupping$umap_ASVs_Ait_3d
+```
+
+### Sample Tsne
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$TSNE_Sample_Ait_2d
+```
+
+```{r}
+asvGroupping$TSNE_Sample_Ait_3d
+```
+
+### Sample umap
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+asvGroupping$umap_Sample_Ait_2d
+```
+
+```{r}
+asvGroupping$umap_Sample_Ait_3d
+```
+
+<!--Sub Sub Sec 2 -  Close -->
+:::
+
 :::
 
 :::
