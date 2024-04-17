@@ -197,8 +197,7 @@ AnalyzeASVgroup <- function(
     theme(legend.position = 'bottom')+
     coord_flip() +
     scale_fill_manual(values = colorASVgs)+
-    scale_color_manual(values = colorASVgs)+
-    scale_fill_manual(values = colorASVgs)
+    scale_color_manual(values = colorASVgs)
   
   
   gpairs_lower <- function(g){
@@ -322,9 +321,286 @@ AnalyzeASVgroup <- function(
   
   ###################################
   ################################### 
-  ### Now using the composition
-  ###################################
+  #### ASV Compositions :
+  df_asv_composition = tidy_grump(dfLonger)$ASV_composition
+  df_asv_composition = df_asv_composition %>% rename('ASV_name'=1) %>%
+    left_join(dfLonger %>% select(ASV_name,Cluster) %>% distinct()) %>% data.frame()
   
+  selectcols  = colnames(df_asv_composition)
+  selectcols  = selectcols[which(selectcols%!in%c('ASV_name','Cluster'))]
+  aitDistHere = robCompositions::aDist(df_asv_composition[,selectcols])
+  
+  mds_obj <- cmdscale(d = aitDistHere,
+                      k = 3,eig = T,add=T)
+  
+  pct_explained = round(100 * mds_obj$eig/sum(mds_obj$eig),1)
+  
+  df_asv_composition <- df_asv_composition %>% mutate(
+    MDS1 = mds_obj$points[,1],
+    MDS2 = mds_obj$points[,2],
+    MDS3 = mds_obj$points[,3]
+  )
+  
+  out$MDS2d_ASVs_Ait = ggplot(
+    data = df_asv_composition,
+    mapping = aes(x=MDS1,y=MDS2,
+                  color=Cluster))+
+    geom_point(alpha=0.7,size=3) +
+    theme_minimal(base_size = 12) +
+    xlab(paste('MDS1 -',pct_explained[1],'%'))+
+    ylab(paste('MDS2 -',pct_explained[2],'%'))+
+    theme(legend.position = 'bottom')+
+    ggtitle('AitDist ASV compositions')
+    
+    
+  ###########################################
+  #tsneplots
+  library(Rtsne)
+  set.seed(1234)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2)
+  df_asv_composition$tsne1 = tsneCoords$Y[,1]
+  df_asv_composition$tsne2 = tsneCoords$Y[,2]
+  
+  out$TSNE_ASVs_Ait_2d <- ggplot(
+    data = df_asv_composition,
+    mapping = aes(x=tsne1,y=tsne2,
+                  color=Cluster))+
+    geom_point(alpha=0.7,size=3) +
+    theme_minimal(base_size = 12)+
+    theme(legend.position = 'bottom')+
+    ggtitle('AitDist ASV compositions - tsne')
+  
+  set.seed(1234)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 3)
+  df_asv_composition$tsne1 = tsneCoords$Y[,1]
+  df_asv_composition$tsne2 = tsneCoords$Y[,2]
+  df_asv_composition$tsne3 = tsneCoords$Y[,3]
+  df_asv_composition = df_asv_composition %>% mutate(Cluster_num=as.numeric(Cluster))
+  
+  axx <- list(
+    title = "tsne1"
+  )
+  
+  axy <- list(
+    title = "tsne2"
+  )
+  
+  axz <- list(
+    title = "tsne3"
+  )
+  
+  out$TSNE_ASVs_Ait_3d <- plotly::plot_ly(
+    x=df_asv_composition$tsne1,
+    y=df_asv_composition$tsne2,
+    z=df_asv_composition$tsne3,
+    color = as.numeric(df_asv_composition$Cluster_num),
+    type="scatter3d",
+    mode="markers") %>%
+    #plotly::layout(
+    #  scene = list(aspectratio = list(x = 4, y = 4, z = 3))) %>% 
+    #list(xaxis=list(title='MDS1'),yaxis=list(title='MDS2'),zaxis=list(title='MDS3'))) %>% 
+    plotly::layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz)) %>% 
+    plotly::hide_colorbar() 
+  ###################-------------------------------------------------------------------------
+  ##### Umap --------------------------
+  ###################-------------------------------------------------------------------------
+  library(umap)
+  custom.config <- umap.defaults
+  custom.config$n_neighbors=25
+  custom.config$min_dist=0.5
+  custom.config$spread = 1
+  
+  clr_transf <- robCompositions::cenLR(df_asv_composition[,selectcols])
+  #test_duplicated = duplicated(clr_transf) there are no duplicates!
+  #dim(clr_transf$x.clr)
+  clr_transf = bind_cols(
+    ASV_name = df_asv_composition$ASV_name,
+    Cluster = df_asv_composition$Cluster,
+    clr_transf$x.clr)
+  
+  
+  set.seed(1234)
+  umap_obj <- umap(d = clr_transf %>% select(-ASV_name,-Cluster),config = custom.config)
+  #umap_obj <- umap(d = as.matrix(aitDistHere),input="dist")
+  #plot(umap_obj$layout)
+  df_asv_composition = df_asv_composition %>%
+    mutate(umap1=umap_obj$layout[,1],umap2=umap_obj$layout[,2])
+
+  
+  out$umap_ASVs_Ait_2d <- ggplot(
+    data = df_asv_composition,
+    mapping = aes(x=umap1,y=umap2,
+                  color=Cluster))+
+    geom_point(alpha=0.7,size=3) +
+    theme_minimal(base_size = 12)+
+    theme(legend.position = 'bottom')+
+    ggtitle('AitDist ASV compositions - umap - n_neighbors=50 - min_dist=0.25-spread = 0.5')
+  
+  
+  custom.config$n_components=3
+  umap_obj <- umap(d = clr_transf %>% select(-ASV_name,-Cluster),config = custom.config)
+  #umap_obj <- umap(d = as.matrix(aitDistHere),input="dist")
+  #plot(umap_obj$layout)
+  df_asv_composition = df_asv_composition %>%
+    mutate(umap1=umap_obj$layout[,1],umap2=umap_obj$layout[,2],umap3=umap_obj$layout[,3])
+  
+  
+  axx <- list(
+    title = "umap1"
+  )
+  
+  axy <- list(
+    title = "umap2"
+  )
+  
+  axz <- list(
+    title = "umap3"
+  )
+  
+  out$umap_ASVs_Ait_3d <- plotly::plot_ly(
+    x=df_asv_composition$umap1,
+    y=df_asv_composition$umap2,
+    z=df_asv_composition$umap3,
+    color = as.numeric(df_asv_composition$Cluster_num),
+    type="scatter3d",
+    mode="markers") %>%
+    #plotly::layout(
+    #  scene = list(aspectratio = list(x = 4, y = 4, z = 3))) %>% 
+    #list(xaxis=list(title='MDS1'),yaxis=list(title='MDS2'),zaxis=list(title='MDS3'))) %>% 
+    plotly::layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz)) %>% 
+    plotly::hide_colorbar() 
+  
+  
+  #######################################-------------------------------------------------------------------------------------------
+  ### Now using the Sample compositions ---composition
+  
+  
+  dfBiotic_Wider = dfBiotic %>% 
+    select(ID_Sample,Cluster,RA) %>%
+    pivot_wider(names_from = Cluster,values_from = RA)
+  
+  dfBiotic_Wider_MDS <- dfBiotic_Wider %>% 
+    mutate(across(where(is.numeric),function(x) x+0.00000001)) %>% 
+    mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) 
+  
+  
+  aitDistHere <- robCompositions::aDist(x = dfBiotic_Wider_MDS[,-1])
+  set.seed(1234)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2)
+  dfBiotic_Wider_MDS$tsne1 = tsneCoords$Y[,1]
+  dfBiotic_Wider_MDS$tsne2 = tsneCoords$Y[,2]
+  dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>%  left_join(
+    dfAbioMostAbundant %>% 
+      select(ID_Sample,Cluster,RA))
+  
+  out$TSNE_Sample_Ait_2d <- ggplot(
+    data = dfBiotic_Wider_MDS,
+    mapping = aes(x=tsne1,y=tsne2,
+                  color=Cluster,size=RA))+
+    geom_point(alpha=0.35) +
+    theme_minimal(base_size = 12)+
+    theme(legend.position = 'bottom')+
+    ggtitle('AitDist Sample compositions - tsne')
+  
+  set.seed(1234)
+  tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 3)
+  dfBiotic_Wider_MDS$tsne1 = tsneCoords$Y[,1]
+  dfBiotic_Wider_MDS$tsne2 = tsneCoords$Y[,2]
+  dfBiotic_Wider_MDS$tsne3 = tsneCoords$Y[,3]
+  dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>% mutate(Cluster_num=as.numeric(Cluster))
+  
+  axx <- list(
+    title = "tsne1"
+  )
+  
+  axy <- list(
+    title = "tsne2"
+  )
+  
+  axz <- list(
+    title = "tsne3"
+  )
+  
+  out$TSNE_Sample_Ait_3d <- plotly::plot_ly(
+    x=dfBiotic_Wider_MDS$tsne1,
+    y=dfBiotic_Wider_MDS$tsne2,
+    z=dfBiotic_Wider_MDS$tsne3,
+    color = as.numeric(dfBiotic_Wider_MDS$Cluster_num),
+    type="scatter3d",
+    mode="markers") %>%
+    #plotly::layout(
+    #  scene = list(aspectratio = list(x = 4, y = 4, z = 3))) %>% 
+    #list(xaxis=list(title='MDS1'),yaxis=list(title='MDS2'),zaxis=list(title='MDS3'))) %>% 
+    plotly::layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz)) %>% 
+    plotly::hide_colorbar() 
+  
+  ###################-------------------------------------------------------------------------
+  ##### Umap --------------------------
+  ###################-------------------------------------------------------------------------
+  custom.config <- umap.defaults
+  #custom.config$n_neighbors=25
+  custom.config$min_dist=0.5
+  custom.config$spread = 1
+  clr_transf <- robCompositions::cenLR(x = dfBiotic_Wider_MDS %>% select(starts_with('ASVG_')) %>% data.frame())
+  #test_duplicated = duplicated(clr_transf) there are no duplicates!
+  #dim(clr_transf$x.clr)
+  clr_transf = bind_cols(
+    ID_Sample = dfBiotic_Wider_MDS$ID_Sample,
+    clr_transf$x.clr)
+  
+  
+  set.seed(1234)
+  umap_obj <- umap(d = clr_transf %>% select(-ID_Sample),config = custom.config)
+  #umap_obj <- umap(d = as.matrix(aitDistHere),input="dist")
+  #plot(umap_obj$layout)
+  dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>%
+    mutate(umap1=umap_obj$layout[,1],umap2=umap_obj$layout[,2])
+  
+  
+  out$umap_Sample_Ait_2d <- ggplot(
+    data = dfBiotic_Wider_MDS,
+    mapping = aes(x=umap1,y=umap2,size=RA,color=Cluster))+
+    geom_point(alpha=0.35) +
+    theme_minimal(base_size = 12)+
+    theme(legend.position = 'bottom')+
+    ggtitle('AitDist Sample compositions - umap - n_neighbors=15 - min_dist=0.25-spread = 0.5')
+  
+  
+  custom.config$n_components=3
+  umap_obj <- umap(d = clr_transf %>% select(-ID_Sample),config = custom.config)
+  #umap_obj <- umap(d = as.matrix(aitDistHere),input="dist")
+  #plot(umap_obj$layout)
+  dfBiotic_Wider_MDS = dfBiotic_Wider_MDS %>%
+    mutate(umap1=umap_obj$layout[,1],umap2=umap_obj$layout[,2],umap3=umap_obj$layout[,3])
+  
+  
+  axx <- list(
+    title = "umap1"
+  )
+  
+  axy <- list(
+    title = "umap2"
+  )
+  
+  axz <- list(
+    title = "umap3"
+  )
+  
+  out$umap_Sample_Ait_3d <- plotly::plot_ly(
+    x=dfBiotic_Wider_MDS$umap1,
+    y=dfBiotic_Wider_MDS$umap2,
+    z=dfBiotic_Wider_MDS$umap3,
+    color = as.numeric(dfBiotic_Wider_MDS$Cluster_num),
+    type="scatter3d",
+    mode="markers") %>%
+    #plotly::layout(
+    #  scene = list(aspectratio = list(x = 4, y = 4, z = 3))) %>% 
+    #list(xaxis=list(title='MDS1'),yaxis=list(title='MDS2'),zaxis=list(title='MDS3'))) %>% 
+    plotly::layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz)) %>% 
+    plotly::hide_colorbar() 
+  
+  ############################################################_----------------------------------------------
+  ############################################################-----------------------------------------------
   ##### Ordination with aitichison
   dfBiotic_Wider = dfBiotic %>% 
     select(ID_Sample,Cluster,RA) %>%

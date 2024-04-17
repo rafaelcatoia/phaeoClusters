@@ -513,7 +513,6 @@ perm_alpha0.50 = permanova_custom(
   B = 500)
 saveRDS(perm_alpha0.50,file = paste0(savingdir,'/','perm_alpha0.50'))
 }
-
 ```
 
 ```{r}
@@ -803,6 +802,8 @@ stable_obj_alpha0.10_n22= readRDS(paste0(savingdir,'/','stable_obj_alpha0.10_n22
 stable_obj_alpha0.25_n22= readRDS(paste0(savingdir,'/','stable_obj_alpha0.25_n22'))
 stable_obj_alpha0.50_n22= readRDS(paste0(savingdir,'/','stable_obj_alpha0.50_n22'))
 
+
+
 pmatrix_a0 <- reorder_to_matrix_plot(stable_obj_alpha0_n22)
 pmatrix_a0.10 <- reorder_to_matrix_plot(stable_obj_alpha0.10_n22)
 pmatrix_a0.25 <- reorder_to_matrix_plot(stable_obj_alpha0.25_n22)
@@ -1008,7 +1009,7 @@ p4
 
 ```{r}
 #| fig-width: 20
-#| fig-height: 4
+#| fig-height: 3
 #| fig-align: center
 #| layout-nrow: 4
 vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
@@ -1029,13 +1030,127 @@ plot_knowns_vs_unknowns(specific_species = T,
   dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
     filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[1]))
 ```
+
 ##### Cordata
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[2]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[2]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[2]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[2]))
+```
 
 ##### Globosa
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[3]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[3]))
+```
 
 ##### Pouchetii
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[4]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[4]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[4]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[4]))
+```
 
 ##### Rex
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[5]))
+```
+
+##### Rex
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[5]))
+```
+
+
 :::
 
 :::
@@ -1230,15 +1345,64 @@ p3
 p4
 ```
 
-Now just looking at the very specific known groups -- Lets just look at the globosa
+#### Specifics
+::: panel-tabset
+
+##### Antartica
 
 ```{r}
 #| fig-width: 20
-#| fig-height: 4
+#| fig-height: 3
 #| fig-align: center
 #| layout-nrow: 4
 vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
 
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[1]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[1]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[1]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[1]))
+```
+
+##### Cordata
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[2]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[2]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[2]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[2]))
+```
+
+##### Globosa
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
 plot_knowns_vs_unknowns(specific_species = T,
   dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
     filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[3]))
@@ -1256,6 +1420,82 @@ plot_knowns_vs_unknowns(specific_species = T,
     filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[3]))
 ```
 
+##### Pouchetii
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[4]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[4]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[4]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[4]))
+```
+
+##### Rex
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[5]))
+```
+
+##### Rex
+```{r}
+#| fig-width: 20
+#| fig-height: 3
+#| fig-align: center
+#| layout-nrow: 4
+vet_species = c("Phaeocystis_antarctica","Phaeocystis_cordata","Phaeocystis_globosa","Phaeocystis_pouchetii","Phaeocystis_rex")
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm2,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.1',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.25',vet_species[5]))
+
+plot_knowns_vs_unknowns(specific_species = T,
+  dm_aux = dm3,df_ordered_ASVs = df_asv_species %>%
+    filter(Species==vet_species[1])) + ggtitle(paste('alpha=0.50',vet_species[5]))
+```
+
+
+:::
+
 :::
 
 :::
@@ -1270,15 +1510,16 @@ inducedDist_ = inducedDist(
   c1 = 1,c2=1000,c3=10,c4=10,
   compMatrix = dframe$ASV_composition)
 
-alpha_ = 0.1
+alpha_ =  0.25
 combdist=  alpha_*inducedDist_$normalizedMyDist + (1-alpha_)*inducedDist_$normalizedAitDist
 pam_10 = cluster::pam(x = as.dist(combdist),k = 22)
-#hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
+hclust22= cutree(hclust(d = as.dist(combdist),method = 'ward.D'),k=22)
 
 df_clusters = data.frame(
   ASV_name=dframe$ASV_composition$name,
   Cluster = pam_10$clustering)
   #Cluster = hclust22)
+
 
 asvGroupping <- AnalyzeASVgroup(
   dfLonger = dframe$dframe %>% 
@@ -1383,6 +1624,42 @@ Bivariate
 #| fig-height: 16
 #| fig-width: 16
 asvGroupping$MatrixAbioticsBiVar
+```
+
+##### ASV Tsne
+```{r}
+asvGroupping$TSNE_ASVs_Ait_2d
+```
+
+```{r}
+asvGroupping$TSNE_ASVs_Ait_3d
+```
+
+##### ASV umap
+```{r}
+asvGroupping$umap_ASVs_Ait_2d
+```
+
+```{r}
+asvGroupping$umap_ASVs_Ait_3d
+```
+
+##### Sample Tsne
+```{r}
+asvGroupping$TSNE_Sample_Ait_2d
+```
+
+```{r}
+asvGroupping$TSNE_Sample_Ait_3d
+```
+
+##### Sample umap
+```{r}
+asvGroupping$umap_Sample_Ait_2d
+```
+
+```{r}
+asvGroupping$umap_Sample_Ait_3d
 ```
 
 <!--Sub Sub Sec 2 -  Close -->
