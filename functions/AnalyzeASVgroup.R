@@ -367,7 +367,7 @@ AnalyzeASVgroup <- function(
   library(Rtsne)
   set.seed(1234)
   tsneCoords = Rtsne(X = as.dist(aitDistHere),is_distance = TRUE, dims = 2,
-                     perplexity=100, max_iter = 2000,learning=100)
+                     perplexity=150, max_iter = 2000,learning=100)
   df_asv_composition$tsne1 = tsneCoords$Y[,1]
   df_asv_composition$tsne2 = tsneCoords$Y[,2]
   

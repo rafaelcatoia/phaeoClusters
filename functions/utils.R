@@ -11,13 +11,17 @@ library(dplyr)
 #  filter(Cruise!="MOSAiC" )
 
 # Create composition and filter two ASV with no abundance
-tidy_grump <- function(Dframe,removeMOSAiC=T){
-  
-  ASVs_toRemove = c('GRUMP203261','GRUMP203863') #ASVs that had raw sequence counts equal to zero
-  Dframe = Dframe %>% filter(ASV_name%!in%ASVs_toRemove) # filtering those asvs
-  
+tidy_grump <- function(Dframe,removeMOSAiC=T,vet_ASVs2remove=NULL){
+  #ASVs_toRemove = c('GRUMP203261','GRUMP203863') #ASVs that had raw sequence counts equal to zero
+  #Dframe = Dframe %>% filter(ASV_name%!in%ASVs_toRemove) # filtering those asvs
+  Dframe = Dframe %>% filter(Raw.Sequence.Counts>0)
   if(removeMOSAiC){
     Dframe = Dframe %>% filter(Cruise!="MOSAiC" )
+  }
+  
+  if(!is.null(vet_ASVs2remove)){
+    vet_ASVs2remove = unlist(vet_ASVs2remove)
+    Dframe = Dframe %>% filter(ASV_name%!in%vet_ASVs2remove)
   }
   
   idAsvs = unique(Dframe$ASV_name) # listing all ASVs
@@ -38,6 +42,9 @@ tidy_grump <- function(Dframe,removeMOSAiC=T){
   
   ASVs_with_Species = Dframe %>% filter(!is.na(Species)) %>% select(ASV_name,Species) %>% distinct()
   
+  #### to be able to make the
+  value_toAdd = min(Dframe$Raw.Sequence.Counts)/1000
+  
   output = list(
     
     ## Id with all ASVs
@@ -51,12 +58,11 @@ tidy_grump <- function(Dframe,removeMOSAiC=T){
       select(SampleKey,ASV_name,Raw.Sequence.Counts) %>% 
       pivot_wider(id_cols = c('SampleKey'),
                   values_from ='Raw.Sequence.Counts',
-                  names_from='ASV_name',values_fill = 0) %>%
+                  names_from='ASV_name',values_fill = value_toAdd) %>%
       arrange(SampleKey) %>% 
-      mutate(across(where(is.numeric))/
-               rowSums(across(where(is.numeric)))) %>% ### Here we have the compositions on the samples
-      mutate(across(where(is.numeric),function(x) {x+0.00000000001}))%>%  ### Adding a small value in all, in order to have the CLR transformation / aitichison distance
-      mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ### composition over the samples gain
+      mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ### Here we have the compositions on the samples
+      #mutate(across(where(is.numeric),function(x) {x+0.00000000001}))%>%  ### Adding a small value in all, in order to have the CLR transformation / aitichison distance
+      #mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ### composition over the samples gain
       pivot_longer(cols = any_of(idAsvs)) %>% ## Stacking to transpose 
       pivot_wider(id_cols='name',
                   values_from = value,

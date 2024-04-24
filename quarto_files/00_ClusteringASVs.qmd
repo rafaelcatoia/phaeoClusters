@@ -915,7 +915,7 @@ pmatrix_a0.50$p_hclust
 #| fig-width: 20
 #| fig-height: 5
 #| fig-align: center
-p1 = dm %>%
+p1 = dm %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -923,7 +923,7 @@ p1 = dm %>%
   theme_minimal()+
   ggtitle('alpha=0')
   
-p2 = dm2 %>%
+p2 = dm2 %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -931,7 +931,7 @@ p2 = dm2 %>%
   theme_minimal()+
   ggtitle('alpha=0.1')
 
-p3 = dm3 %>%
+p3 = dm3 %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -939,7 +939,7 @@ p3 = dm3 %>%
   theme_minimal()+
   ggtitle('alpha=0.25')
 
-p4 = dm4 %>%
+p4 = dm4 %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -1137,11 +1137,12 @@ plot_knowns_vs_unknowns(specific_species = T,
 #### All ASVs
 
 ```{r}
-#| fig-width: 4
+#| fig-width: 6
 #| fig-height: 4
 #| fig-align: center
 #| layout-ncol: 2
 #| layout-nrow: 2
+
 
 pallete10 <- colorRampPalette(c('white','purple4'))(4)
 #pallete10 = c("#FFFFFF",pallete10)
@@ -1233,7 +1234,8 @@ pmatrix_a0.50$p_pam
 #| fig-width: 20
 #| fig-height: 5
 #| fig-align: center
-p1 = dm %>%
+
+p1 = dm %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -1241,7 +1243,7 @@ p1 = dm %>%
   theme_minimal()+
   ggtitle('alpha=0')
   
-p2 = dm2 %>%
+p2 = dm2 %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -1249,7 +1251,7 @@ p2 = dm2 %>%
   theme_minimal()+
   ggtitle('alpha=0.1')
 
-p3 = dm3 %>%
+p3 = dm3 %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
@@ -1257,13 +1259,15 @@ p3 = dm3 %>%
   theme_minimal()+
   ggtitle('alpha=0.25')
 
-p4 = dm4 %>%
+p4 = dm4 %>% filter(rowid!=variable) %>% 
   group_by(simm) %>% 
   summarise(Pct = n()/nrow(dm)) %>%
   ggplot(aes(x=simm,y=Pct))+
   geom_col()+
   theme_minimal()+
   ggtitle('alpha=0.50')
+
+gridExtra::grid.arrange(p1,p2,p3,p4,ncol=4)
 
 
 gridExtra::grid.arrange(p1,p2,p3,p4,ncol=4)
@@ -1464,7 +1468,7 @@ inducedDist_ = inducedDist(
   dFrame = dframe$dframe,
   c1 = 1,c2=1000,c3=10,c4=10,
   compMatrix = dframe$ASV_composition)
-
+  
 alpha_ =  0.1
 combdist=  alpha_*inducedDist_$normalizedMyDist + (1-alpha_)*inducedDist_$normalizedAitDist
 pam_10 = cluster::pam(x = as.dist(combdist),k = 22)
@@ -1474,6 +1478,11 @@ df_clusters = data.frame(
   ASV_name=dframe$ASV_composition$name,
   Cluster = pam_10$clustering)
   #Cluster = hclust22)
+
+#simm_ait[1:5,1:5]
+#simm_ait = 1/(1+inducedDist_$normalizedAitDist)
+#testqgraph = qgraph::qgraph(as.matrix(simm_ait), layout='spring')
+
 
 asvGroupping <- AnalyzeASVgroup(
   dfLonger = dframe$dframe %>% 
@@ -1550,6 +1559,7 @@ If the ASV Groupping is not present, than the point is removed.
 ```{r}
 #| fig-width: 12
 #| fig-height: 16
+#| fig-align: center
 asvGroupping$LatDepth_stacked + theme(legend.position = '')
 ```
 
