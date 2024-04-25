@@ -10,11 +10,12 @@ format:
     fig-dpi: 100
     warning: false
     message: false
-    page-layout: custom
+    page-layout: article
     embed-resources: true
 ---
 
 ::: panel-tabset
+
 # Data Handling
 
 ```{r}
@@ -25,6 +26,7 @@ root <- rprojroot::has_file(".git/index")
 datadir = root$find_file("data")
 funsdir = root$find_file("functions")
 savingdir = root$find_file("saved_files")
+savingdirOceanSlices = root$find_file("saved_files_oceanSlices")
 
 datapath = root$find_file(paste0(datadir,'/','grump.phaeocystis_asv_long.csv'))
 files_vec <- list.files(funsdir)
@@ -34,13 +36,7 @@ for( i in 1:length(files_vec)){
   source(root$find_file(paste0(funsdir,'/',files_vec[i])))
 }
 
-funcitons_parallel = c("clusterize_ward_pam",
-                       "eval_adist_clustering",
-                       "inducedDist",
-                       "summarise_adist_clustering",
-                       "tidy_grump")
-
-dframe = data.table::fread(input = datapath)
+dframe = data.table::fread(input = datapath) %>% filter(Cruise!="MOSAiC",Raw.Sequence.Counts>0)
 dframe_allASVs = tidy_grump(Dframe = dframe)
 ```
 
@@ -66,7 +62,6 @@ inducedDist_ = inducedDist(
   dFrame = dframe_allASVs$dframe,
   c1 = 1,c2=1000,c3=10,c4=10,
   compMatrix = dframe_allASVs$ASV_composition)
-#inducedDist$myDist_checking
 ```
 
 # Excluding zeros
@@ -92,7 +87,6 @@ plot0s_summ %>% ggplot(aes(x=FreqNSamples,y=CummPct))+geom_bar(stat='identity')
 
 plot0s_summ %>% knitr::kable() %>% kableExtra::kable_styling()
 
-
 ### Creating vectors with id of ASVs to remove:
 ASVs2Remove_df = dframe_allASVs$dframe %>% group_by(ASV_name,SampleKey) %>% 
   summarise(Freq=n()) %>%
@@ -100,8 +94,11 @@ ASVs2Remove_df = dframe_allASVs$dframe %>% group_by(ASV_name,SampleKey) %>%
   arrange(nSamplesObserved) %>% 
   select(ASV_name,nSamplesObserved) %>% distinct() 
 
-vetASVs_2orMore = ASVs2Remove_df %>% filter(nSamplesObserved>1) %>% select(ASV_name) %>% pull()
-vetASVs_3orMore = ASVs2Remove_df %>% filter(nSamplesObserved>2) %>% select(ASV_name) %>% pull()
+vetASVs_2orMore = ASVs2Remove_df %>% filter(nSamplesObserved<2) %>% select(ASV_name) %>% pull()
+vetASVs_3orMore = ASVs2Remove_df %>% filter(nSamplesObserved<3) %>% select(ASV_name) %>% pull()
+
+saveRDS(vetASVs_2orMore,file = paste0(savingdirOceanSlices,'/','asvs_to_remove_oneSample'))
+saveRDS(vetASVs_3orMore,file = paste0(savingdirOceanSlices,'/','asvs_to_remove_twoSample'))
 ```
 This is the number of ASVs that are preset in exactly that amount of samples.
 
@@ -109,18 +106,18 @@ Lets look now the number of samples with how many ASVs,
 
 ```{r}
 ## now looking ASVs inside samples
+nsamples = dframe_allASVs$dframe %>% select(SampleID) %>% distinct() %>% nrow()
 plot0s_summ2 = dframe_allASVs$dframe %>% 
   group_by(SampleKey) %>% 
-  summarise(Freq=n()) %>% 
-  arrange(Freq) %>% 
-  mutate(FreqAsvs=cut(Freq,breaks = c(0,1,2,3,5,10,25,50,100,250),
+  summarise(NumbersOfAsvInEachSample=n()) %>% 
+  arrange(NumbersOfAsvInEachSample) %>% 
+  mutate(FreqAsvs=cut(NumbersOfAsvInEachSample,breaks = c(0,1,2,3,5,10,25,50,100,250,500),
                       right = T,include.lowest = T)) %>% 
   group_by(FreqAsvs) %>% 
-  summarise(Freq=n(),Pct=n()/nSamples) %>% 
+  summarise(Freq=n(),Pct=n()/nsamples) %>% 
   mutate(CummPct = cumsum(Pct))
 
 plot0s_summ2 %>% knitr::kable() %>% kableExtra::kable_styling()
-
 ```
 
 
@@ -130,11 +127,20 @@ Lets now compare the distance matrix using mds, ltns, and umap.
 ## All Asvs
 ```{r}
 dim_reduce_obj <- dim_reduce_plots(dfComposition = dframe_allASVs$ASV_composition)
+
+dim_reduce_obj$MDS2d_ASVs_Ait
+dim_reduce_obj$TSNE_ASVs_Ait_2d
+dim_reduce_obj$umap_ASVs_Ait_2d
 ```
 
 ## Two or More
 ```{r}
 dframe2plus = tidy_grump(Dframe = dframe,vet_ASVs2remove = vetASVs_2orMore)
+dim(dframe2plus$ASV_composition)
+```
+We have 767 ASVs and 975 samples
+
+```{r}
 dim_reduce_obj2plus <- dim_reduce_plots(
   dfComposition = dframe2plus$ASV_composition,perplexityTsne = 100)
 
@@ -146,8 +152,19 @@ dim_reduce_obj2plus$umap_ASVs_Ait_2d
 ## Three or More
 ```{r}
 dframe3plus = tidy_grump(Dframe = dframe,vet_ASVs2remove = vetASVs_3orMore)
-dim_reduce_obj3plus <- dim_reduce_plots(dframe3plus = dframe2plus$ASV_composition)
+
+dim(dframe3plus$ASV_composition)
 ```
+598 ASVs and 971 samples.
+
+```{r}
+dim_reduce_obj3plus <- dim_reduce_plots(dfComposition = dframe3plus$ASV_composition,perplexityTsne = 100)
+dim_reduce_obj3plus$MDS2d_ASVs_Ait
+dim_reduce_obj3plus$TSNE_ASVs_Ait_2d
+dim_reduce_obj3plus$umap_ASVs_Ait_2d
+```
+
+It feels that removing rare ASVs won't help..
 
 :::
 
@@ -164,47 +181,93 @@ So for each aggregation we should take a look at mds, tsne, umap of the ait dist
 
 So first lets do a bit of EDA to see what we can expect.
 
+::: panel-tabset
+
+## Distribution of Depth
 
 ```{r}
-dframe$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>% distinct() %>% 
-  ggplot(aes(Depth))+geom_histogram()+
-  facet_wrap(~Longhurst_Short)
+dframe_allASVs$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>%  distinct() %>% 
+  ggplot(aes(Depth))+geom_histogram()
 
+dframe_allASVs$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>%  distinct() %>% 
+  ggplot(aes(Depth))+geom_boxplot()
+```
 
+Let's slice the dephts of the ocean in 10%. 
 
+```{r}
+distinct_depth <- dframe_allASVs$dframe %>% select(SampleKey,Depth) %>% distinct()
+qtls_0.1 = quantile(distinct_depth$Depth, seq(0,1,0.1))
+qtlsNames = 1:(length(qtls_0.1)-1)
+qtlsNames = ifelse(qtlsNames<10,paste0('DGR0',qtlsNames),paste0('DGR',qtlsNames))
+qtls_0.1
+```
 
-dframe$dframe  %>% select()
-      group_by(Longhurst_Short,ASV_name) %>% 
-      mutate(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% 
+Here are the depth quantiles.
 
+```{r}
+distinct_depth = distinct_depth %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames))
+        
+distinct_depth %>% group_by(CatDepth) %>% 
+  summarise(Freq=n())
+```
 
-      pivot_wider(id_cols = Longhurst_Short_,
-                  values_from ='Raw.Sequence.Counts',
-                  names_from='ASV_name',values_fill = 0) %>%
-      arrange(SampleKey) %>% 
-      mutate(across(where(is.numeric))/
-               rowSums(across(where(is.numeric)))) %>% ### Here we have the compositions on the samples
-      mutate(across(where(is.numeric),function(x) {x+0.00000000001}))%>%  ### Adding a small value in all, in order to have the CLR transformation / aitichison distance
-      mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ### composition over the samples gain
-      pivot_longer(cols = any_of(idAsvs)) %>% ## Stacking to transpose 
-      pivot_wider(id_cols='name',
-                  values_from = value,
-                  names_from='SampleKey') %>% ## Wider again, ASVs in the row
-      mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are the sample. The rows now add to 1.
-      arrange(name) %>% data.frame()
+```{r}
+dframe_allASVs$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>% distinct() %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  ggplot(aes(CatDepth))+geom_bar()+
+  facet_wrap(~Longhurst_Short,scales='free_y')
+```
+This is the distribution of number of samples for each GDR (group depth rank for each longhurst province. 
 
+So our first tentative will be to create compositions of asvs with this amount of combinations (GDRxLH)
 
+## Analysing new Combinations Dist Matrix
 
+::: panel-tabset
 
+### LH and Depth Slices
+
+```{r}
+LH_Depth_Composition_df=readRDS(file = paste0(savingdir,'/','LH_Depth_Composition_df'))
+
+LH_Depth_dimRed <- dim_reduce_plots(
+  dfComposition = LH_Depth_Composition_df,perplexityTsne = 100,
+  neighUmap = 250)
+
+LH_Depth_dimRed$MDS2d_ASVs_Ait
+LH_Depth_dimRed$TSNE_ASVs_Ait_2d
+LH_Depth_dimRed$umap_ASVs_Ait_2d
 ```
 
 
+### LH and Depth Slices
+
+```{r}
+Lat_Depth_Composition_df=readRDS(file = paste0(savingdir,'/','Lat_Depth_Composition_df'))
+
+Lat_Depth_dimRed <- dim_reduce_plots(
+  dfComposition = Lat_Depth_Composition_df,perplexityTsne = 100,
+  neighUmap = 250)
+
+Lat_Depth_dimRed$MDS2d_ASVs_Ait
+Lat_Depth_dimRed$TSNE_ASVs_Ait_2d
+Lat_Depth_dimRed$umap_ASVs_Ait_2d
+```
+
+:::
+
+:::
 
 
+#Creating Clusters
 
+Let's now create and evaluate the clusters using this two ocean slices that we have
 
+```{r}
 
-
+```
 
 
 

@@ -45,7 +45,7 @@ tidy_grump <- function(Dframe,removeMOSAiC=T,vet_ASVs2remove=NULL){
   #### to be able to make the
   value_toAdd = min(Dframe$Raw.Sequence.Counts)/1000
   
-  output = list(
+  output =  output = list(
     
     ## Id with all ASVs
     id_ASVs = idAsvs,
@@ -56,6 +56,7 @@ tidy_grump <- function(Dframe,removeMOSAiC=T,vet_ASVs2remove=NULL){
     ## ASV composition (composition on samples, transposing and than composition on asvs)
     ASV_composition = Dframe %>% #filter(is.na(Species)) %>% 
       select(SampleKey,ASV_name,Raw.Sequence.Counts) %>% 
+      mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+value_toAdd) %>% 
       pivot_wider(id_cols = c('SampleKey'),
                   values_from ='Raw.Sequence.Counts',
                   names_from='ASV_name',values_fill = value_toAdd) %>%

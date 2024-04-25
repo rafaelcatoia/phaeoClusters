@@ -1,32 +1,3 @@
-######## -----------------------------------
-## Evaluating fit for compositioins --------
-######## -----------------------------------
-
-# #Generating a mock-data-set only to verify
-# set.seed(1234)
-# testingData <- rbind(
-#   dirmult::rdirichlet(n=,5,alpha=c(0.5,1,1,5)),
-#   dirmult::rdirichlet(n=,5,alpha=c(5,1,1,0.5)),
-#   dirmult::rdirichlet(n=,5,alpha=c(0.5,5,5,0.5))
-#   )
-# 
-# 
-# testingData <- data.frame(testingData)
-# colnames(testingData) <- paste0('Samp',1:4)
-# 
-# testingData <- data.frame(
-#   name=paste0('name',1:15),
-#   Cluster = c(rep(1,5),rep(2,5),rep(3,5)),
-#   testingData)
-# 
-# compositionDF <- testingData
-
-# i=30
-# compositionDF = left_join(list_with_clusters_alpha0.50$dFrameAsv_hclust[,c(1,i+1)] %>% rename('name'=1,'Cluster'=2),
-#           dframe$ASV_composition)
-# 
-# compositionDF %>% group_by(Cluster) %>% summarise(freq=n())
-
 eval_adist_clustering <- function(compositionDF){
   ## @compositionDF is a dataframe containing the following collumns:
   ### 1 - ASVnames 
@@ -133,7 +104,6 @@ eval_adist_clustering <- function(compositionDF){
   output$avg_min_dist_clust_i_other = avg_min_dist_clust_i_other
   output$max_min_dist_clust_i_other = max_min_dist_clust_i_other
   
-   
   output$SST = SST
   output$SSW = SSW
   output$SSA = SSA

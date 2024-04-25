@@ -1,0 +1,242 @@
+#### Script to create slices of the ocean to aggregate samples
+
+
+### packages ---
+library(dplyr) ; library(tidyr) ; library(ggplot2) 
+
+### loading functions
+root <- rprojroot::has_file(".git/index")
+datadir = root$find_file("data")
+funsdir = root$find_file("functions")
+savingdir = root$find_file("saved_files")
+savingdir_oceanSlices = root$find_file("saved_files_oceanSlices")
+
+datapath = root$find_file(paste0(datadir,'/','grump.phaeocystis_asv_long.csv'))
+files_vec <- list.files(funsdir)
+
+for( i in 1:length(files_vec)){
+  source(root$find_file(paste0(funsdir,'/',files_vec[i])))
+}
+
+### loading data
+dframe = data.table::fread(input = datapath) %>% filter(Cruise!="MOSAiC",Raw.Sequence.Counts>0)
+# dframe_allASVs = tidy_grump(Dframe = dframe)
+
+################ Creating data for LH and quantiles of depth
+
+## First quantiles of depth
+distinct_depth <- dframe %>% select(SampleID,Depth) %>% distinct()
+qtls_0.1 = quantile(distinct_depth$Depth, seq(0,1,0.1))
+qtlsNames = 1:(length(qtls_0.1)-1)
+qtlsNames = ifelse(qtlsNames<10,paste0('DGR0',qtlsNames),paste0('DGR',qtlsNames))
+
+## stacking and aggregating
+stacked_LH_CatDepth = dframe  %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  mutate(UnitMeasurement = paste0(Longhurst_Short,'_',CatDepth)) %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>% distinct() %>% 
+  group_by(UnitMeasurement,ASV_name) %>% 
+  summarise(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% ungroup() %>% ### Now getting the composition/RA by adding all RawSequence
+  group_by(UnitMeasurement) %>% 
+  mutate(AllRawCounts = sum(Raw.Sequence.Counts)) %>% ungroup() %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>%  ungroup()
+
+## finding the value to add to be able to find CLR and Ait Dist
+min(stacked_LH_CatDepth$Raw.Sequence.Counts)
+valueToAdd =min(stacked_LH_CatDepth$Raw.Sequence.Counts)*1e-06
+
+unitComposition = stacked_LH_CatDepth %>% 
+  select(UnitMeasurement,Raw.Sequence.Counts,ASV_name) %>% 
+  mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+valueToAdd) %>% 
+  pivot_wider(id_cols = 'UnitMeasurement',
+              values_from ='Raw.Sequence.Counts',
+              names_from='ASV_name',values_fill = valueToAdd) %>% 
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% #Compositions created 
+  pivot_longer(cols = -1) %>% #Stacking to transpose 
+  pivot_wider(id_cols='name',values_from = value,
+              names_from='UnitMeasurement') %>% ## Wider again, ASVs in the row
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are combinations LH and depth slices. The rows now 
+  arrange(name) %>% data.frame()
+
+LH_Depth_Composition_df = unitComposition
+saveRDS(object = LH_Depth_Composition_df,file = paste0(savingdir_oceanSlices,'/','LH_Depth_Composition_df') )
+
+################ Creating data for LH and quantiles of depth
+
+LatSlices = seq(-75,85,10)
+qtlsNames_lat = 1:(length(LatSlices)-1)
+qtlsNames_lat = ifelse(qtlsNames_lat<10,paste0('LatSlice0',qtlsNames_lat),paste0('LatSlice',qtlsNames_lat))
+
+
+dfLonger_LatDepth_Group = dframe  %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  mutate(LatSlices = cut(Latitude,breaks = LatSlices,include.lowest = T,right = T,labels = qtlsNames_lat)) %>% 
+  mutate(UnitMeasurement = paste0(LatSlices,'_',CatDepth)) %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>% distinct() %>% 
+  group_by(UnitMeasurement,ASV_name) %>% 
+  summarise(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% ### Now getting the composition/RA by adding all RawSequence
+  ungroup() %>% 
+  group_by(UnitMeasurement) %>% 
+  mutate(AllRawCounts = sum(Raw.Sequence.Counts)) %>% ungroup()
+
+
+valueToAdd =min(dfLonger_LatDepth_Group$Raw.Sequence.Counts)*1e-06
+
+
+dfWiderComposition = dfLonger_LatDepth_Group %>% 
+  select(UnitMeasurement,Raw.Sequence.Counts,ASV_name) %>% 
+  mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+valueToAdd) %>% 
+  pivot_wider(id_cols = 'UnitMeasurement',
+              values_from ='Raw.Sequence.Counts',
+              names_from='ASV_name',values_fill = valueToAdd) %>% 
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ## now transposing
+  pivot_longer(cols = -1) %>% #Stacking to transpose 
+  pivot_wider(id_cols='name',values_from = value,
+              names_from='UnitMeasurement') %>% ## Wider again, ASVs in the row
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are the sample. The rows now 
+  arrange(name) %>% data.frame()
+
+Lat_Depth_Composition_df = dfWiderComposition
+saveRDS(object = Lat_Depth_Composition_df,file = paste0(savingdir_oceanSlices,'/','Lat_Depth_Composition_df') )
+
+####### ---------------------------------------------------------------
+####### ---------------------------------------- Now removing some ASVs
+####### ---------------------------------------------------------------
+
+asvs_to_remove_oneSample = readRDS(file = paste0(savingdir_oceanSlices,'/','asvs_to_remove_oneSample'))
+
+## stacking and aggregating
+stacked_LH_CatDepth = dframe  %>% filter(ASV_name %!in% asvs_to_remove_oneSample) %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  mutate(UnitMeasurement = paste0(Longhurst_Short,'_',CatDepth)) %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>% distinct() %>% 
+  group_by(UnitMeasurement,ASV_name) %>% 
+  summarise(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% ungroup() %>% ### Now getting the composition/RA by adding all RawSequence
+  group_by(UnitMeasurement) %>% 
+  mutate(AllRawCounts = sum(Raw.Sequence.Counts)) %>% ungroup() %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>%  ungroup()
+
+## finding the value to add to be able to find CLR and Ait Dist
+min(stacked_LH_CatDepth$Raw.Sequence.Counts)
+valueToAdd =min(stacked_LH_CatDepth$Raw.Sequence.Counts)*1e-06
+
+unitComposition = stacked_LH_CatDepth %>% 
+  select(UnitMeasurement,Raw.Sequence.Counts,ASV_name) %>% 
+  mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+valueToAdd) %>% 
+  pivot_wider(id_cols = 'UnitMeasurement',
+              values_from ='Raw.Sequence.Counts',
+              names_from='ASV_name',values_fill = valueToAdd) %>% 
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% #Compositions created 
+  pivot_longer(cols = -1) %>% #Stacking to transpose 
+  pivot_wider(id_cols='name',values_from = value,
+              names_from='UnitMeasurement') %>% ## Wider again, ASVs in the row
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are combinations LH and depth slices. The rows now 
+  arrange(name) %>% data.frame()
+
+LH_Depth_Composition_df = unitComposition
+saveRDS(object = LH_Depth_Composition_df,file = paste0(savingdir_oceanSlices,'/','LH_Depth_Composition_df_ASV_Remove1') )
+
+###### ----- 
+
+dfLonger_LatDepth_Group = dframe  %>% filter(ASV_name %!in% asvs_to_remove_oneSample) %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  mutate(LatSlices = cut(Latitude,breaks = LatSlices,include.lowest = T,right = T,labels = qtlsNames_lat)) %>% 
+  mutate(UnitMeasurement = paste0(LatSlices,'_',CatDepth)) %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>% distinct() %>% 
+  group_by(UnitMeasurement,ASV_name) %>% 
+  summarise(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% ### Now getting the composition/RA by adding all RawSequence
+  ungroup() %>% 
+  group_by(UnitMeasurement) %>% 
+  mutate(AllRawCounts = sum(Raw.Sequence.Counts)) %>% ungroup()
+
+
+valueToAdd =min(dfLonger_LatDepth_Group$Raw.Sequence.Counts)*1e-06
+
+
+dfWiderComposition = dfLonger_LatDepth_Group %>% 
+  select(UnitMeasurement,Raw.Sequence.Counts,ASV_name) %>% 
+  mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+valueToAdd) %>% 
+  pivot_wider(id_cols = 'UnitMeasurement',
+              values_from ='Raw.Sequence.Counts',
+              names_from='ASV_name',values_fill = valueToAdd) %>% 
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ## now transposing
+  pivot_longer(cols = -1) %>% #Stacking to transpose 
+  pivot_wider(id_cols='name',values_from = value,
+              names_from='UnitMeasurement') %>% ## Wider again, ASVs in the row
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are the sample. The rows now 
+  arrange(name) %>% data.frame()
+
+Lat_Depth_Composition_df = dfWiderComposition
+saveRDS(object = Lat_Depth_Composition_df,file = paste0(savingdir_oceanSlices,'/','Lat_Depth_Composition_df_ASV_Remove1') )
+
+
+## Now removing 2 samples ------------------------------------------------------------------------------------------------------------
+
+asvs_to_remove_twoSample = readRDS(file = paste0(savingdir_oceanSlices,'/','asvs_to_remove_twoSample'))
+
+## stacking and aggregating
+stacked_LH_CatDepth = dframe  %>% filter(ASV_name %!in% asvs_to_remove_twoSample) %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  mutate(UnitMeasurement = paste0(Longhurst_Short,'_',CatDepth)) %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>% distinct() %>% 
+  group_by(UnitMeasurement,ASV_name) %>% 
+  summarise(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% ungroup() %>% ### Now getting the composition/RA by adding all RawSequence
+  group_by(UnitMeasurement) %>% 
+  mutate(AllRawCounts = sum(Raw.Sequence.Counts)) %>% ungroup() %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>%  ungroup()
+
+## finding the value to add to be able to find CLR and Ait Dist
+min(stacked_LH_CatDepth$Raw.Sequence.Counts)
+valueToAdd =min(stacked_LH_CatDepth$Raw.Sequence.Counts)*1e-06
+
+unitComposition = stacked_LH_CatDepth %>% 
+  select(UnitMeasurement,Raw.Sequence.Counts,ASV_name) %>% 
+  mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+valueToAdd) %>% 
+  pivot_wider(id_cols = 'UnitMeasurement',
+              values_from ='Raw.Sequence.Counts',
+              names_from='ASV_name',values_fill = valueToAdd) %>% 
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% #Compositions created 
+  pivot_longer(cols = -1) %>% #Stacking to transpose 
+  pivot_wider(id_cols='name',values_from = value,
+              names_from='UnitMeasurement') %>% ## Wider again, ASVs in the row
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are combinations LH and depth slices. The rows now 
+  arrange(name) %>% data.frame()
+
+LH_Depth_Composition_df = unitComposition
+saveRDS(object = LH_Depth_Composition_df,file = paste0(savingdir_oceanSlices,'/','LH_Depth_Composition_df_ASV_Remove2') )
+
+###### ----- 
+
+dfLonger_LatDepth_Group = dframe  %>% filter(ASV_name %!in% asvs_to_remove_twoSample) %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  mutate(LatSlices = cut(Latitude,breaks = LatSlices,include.lowest = T,right = T,labels = qtlsNames_lat)) %>% 
+  mutate(UnitMeasurement = paste0(LatSlices,'_',CatDepth)) %>% 
+  select(UnitMeasurement,ASV_name,Raw.Sequence.Counts) %>% distinct() %>% 
+  group_by(UnitMeasurement,ASV_name) %>% 
+  summarise(Raw.Sequence.Counts = sum(Raw.Sequence.Counts)) %>% ### Now getting the composition/RA by adding all RawSequence
+  ungroup() %>% 
+  group_by(UnitMeasurement) %>% 
+  mutate(AllRawCounts = sum(Raw.Sequence.Counts)) %>% ungroup()
+
+
+valueToAdd =min(dfLonger_LatDepth_Group$Raw.Sequence.Counts)*1e-06
+
+
+dfWiderComposition = dfLonger_LatDepth_Group %>% 
+  select(UnitMeasurement,Raw.Sequence.Counts,ASV_name) %>% 
+  mutate(Raw.Sequence.Counts=Raw.Sequence.Counts+valueToAdd) %>% 
+  pivot_wider(id_cols = 'UnitMeasurement',
+              values_from ='Raw.Sequence.Counts',
+              names_from='ASV_name',values_fill = valueToAdd) %>% 
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% ## now transposing
+  pivot_longer(cols = -1) %>% #Stacking to transpose 
+  pivot_wider(id_cols='name',values_from = value,
+              names_from='UnitMeasurement') %>% ## Wider again, ASVs in the row
+  mutate(across(where(is.numeric))/rowSums(across(where(is.numeric)))) %>% # each row is an ASVs and the columns are the sample. The rows now 
+  arrange(name) %>% data.frame()
+
+Lat_Depth_Composition_df = dfWiderComposition
+saveRDS(object = Lat_Depth_Composition_df,file = paste0(savingdir_oceanSlices,'/','Lat_Depth_Composition_df_ASV_Remove2') )
+## ----
+
+
