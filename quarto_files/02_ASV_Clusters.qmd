@@ -1,0 +1,449 @@
+---
+title: "Clustering ASVs"
+format: 
+  html:
+    fig-width: 12
+    fig-height: 8
+    fig-align: center
+    echo: true
+    code-fold: true
+    fig-dpi: 100
+    warning: false
+    message: false
+    page-layout: article
+    embed-resources: true
+---
+
+::: panel-tabset
+
+# Data Handling
+
+```{r}
+library(dplyr) ; library(tidyr) ; library(ggplot2)
+# library(doParallel) ; library(foreach) ; library(doSNOW)
+
+root <- rprojroot::has_file(".git/index")
+datadir = root$find_file("data")
+funsdir = root$find_file("functions")
+savingdir = root$find_file("saved_files")
+savingdirOceanSlices = root$find_file("saved_files_oceanSlices")
+savingdirBinary = root$find_file("saved_files_binary") 
+
+datapath = root$find_file(paste0(datadir,'/','grump.phaeocystis_asv_long.csv'))
+files_vec <- list.files(funsdir)
+
+for( i in 1:length(files_vec)){
+  source(root$find_file(paste0(funsdir,'/',files_vec[i])))
+}
+
+dframe = data.table::fread(input = datapath) %>% filter(Cruise!="MOSAiC",Raw.Sequence.Counts>0)
+dframe_allASVs = tidy_grump(Dframe = dframe,binnary = T)
+
+useStoredFiles = F
+```
+
+# splitting inducer distance matrix
+
+The idea is to create a 'custom' distance matrix, to induce the grouppings.
+
+-   $c_1$ is within the same species - but no unassigned
+-   $c_2$ is between assigned species
+-   $c_3$ is between species and unassigned
+-   $c_4$ is within unassigned and unassigned
+
+![](InduceddistMatrix.png){width="25%" fig-align="center"}
+
+For this document we will use only the following configuration:
+
+$c_1=1$, $c_2=1000$, $c_3=10$ , $c_4=10$
+
+A priori, the 'probability' of unassigned ASVs to agglomerate between themselves is the same as if it was to agglomerate with other species. Large $c_2$ makes it harder for known species ASVs to group between themselves.
+
+```{r}
+inducedDist_ = inducedDist(
+  dFrame = dframe_allASVs$dframe,
+  c1 = 1,c2=1000,c3=10,c4=10,
+  compMatrix = dframe_allASVs$ASV_composition %>% data.frame())
+```
+
+# Excluding zeros
+
+If we exclude the ASVs that appears only one ~or two~ times, does it help?
+
+```{r}
+#| layout-ncol: 2
+nASVs <- dframe_allASVs$dframe %>% select(ASV_name) %>% distinct() %>% nrow()
+
+plot0s_summ = dframe_allASVs$dframe %>% group_by(ASV_name,SampleKey) %>% 
+  summarise(Freq=n()) %>%
+  mutate(nSamplesObserved = sum(Freq)) %>% 
+  arrange(nSamplesObserved) %>% 
+  select(ASV_name,nSamplesObserved) %>% distinct() %>%
+  mutate(FreqNSamples=cut(nSamplesObserved,breaks = c(0,1,2,3,5,10,25,50,100,250,1500),right = T,include.lowest = T)) %>% 
+  group_by(FreqNSamples) %>% 
+  summarise(Freq=n(),Pct=n()/nASVs) %>% 
+  mutate(CummPct = cumsum(Pct))
+
+### Creating vectors with id of ASVs to remove:
+ASVs2Remove_df = dframe_allASVs$dframe %>% group_by(ASV_name,SampleKey) %>% 
+  summarise(Freq=n()) %>%
+  mutate(nSamplesObserved = sum(Freq)) %>% 
+  arrange(nSamplesObserved) %>% 
+  select(ASV_name,nSamplesObserved) %>% distinct() 
+
+vetASVs_2orMore = ASVs2Remove_df %>% filter(nSamplesObserved<2) %>% select(ASV_name) %>% pull()
+vetASVs_3orMore = ASVs2Remove_df %>% filter(nSamplesObserved<3) %>% select(ASV_name) %>% pull()
+
+saveRDS(vetASVs_2orMore,file = paste0(savingdirOceanSlices,'/','asvs_to_remove_oneSample'))
+saveRDS(vetASVs_3orMore,file = paste0(savingdirOceanSlices,'/','asvs_to_remove_twoSample'))
+
+
+nsamples = dframe_allASVs$dframe %>% select(SampleID) %>% distinct() %>% nrow()
+plot0s_summ2 = dframe_allASVs$dframe %>% 
+  group_by(SampleKey) %>% 
+  summarise(NumbersOfAsvInEachSample=n()) %>% 
+  arrange(NumbersOfAsvInEachSample) %>% 
+  mutate(FreqAsvs=cut(NumbersOfAsvInEachSample,breaks = c(0,1,2,3,5,10,25,50,100,250,500),
+                      right = T,include.lowest = T)) %>% 
+  group_by(FreqAsvs) %>% 
+  summarise(Freq=n(),Pct=n()/nsamples) %>% 
+  mutate(CummPct = cumsum(Pct))
+
+plot0s_summ %>% knitr::kable() %>% kableExtra::kable_styling(full_width = FALSE, position = "left")
+plot0s_summ2 %>% knitr::kable() %>% kableExtra::kable_styling(full_width = FALSE, position = "float_left")
+```
+
+Lets now compare the distance matrix using mds, ltns, and umap.
+
+# Visualizing Distance Matrices
+
+::: panel-tabset
+## Composition 
+
+::: panel-tabset
+### All Asvs
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+if(!useStoredFiles){
+  aDist = vegan::vegdist(x = dframe_allASVs$ASV_composition %>% select(-name) %>% data.frame(),method = 'aitchison')
+  coord_plots_all <- distMatrix_dimReduc_coords(distMatrix = as.matrix(aDist))
+  saveRDS(coord_plots_all,file = paste0(savingdir,'/','coord_plots_all'))
+}
+
+coord_plots_all  = readRDS(file = paste0(savingdir,'/','coord_plots_all'))
+
+dim_reduce_obj_all <- plot_dimReduc_coords(coord_plots_all)
+
+dim_reduce_obj_all$MDS_2d
+dim_reduce_obj_all$nMDS_2d
+dim_reduce_obj_all$TSNE_2d
+dim_reduce_obj_all$umap_2d
+```
+
+### Two or More
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+dframe2plus = tidy_grump(Dframe = dframe,vet_ASVs2remove = vetASVs_2orMore)
+
+if(!useStoredFiles){
+  aDist = vegan::vegdist(x = dframe2plus$ASV_composition %>% select(-name) %>% data.frame(),method = 'aitchison')
+  coord_plots_2ormore <- distMatrix_dimReduc_coords(distMatrix = as.matrix(aDist))
+  saveRDS(coord_plots_2ormore,file = paste0(savingdir,'/','coord_plots_2ormore'))
+}
+
+coord_plots_2ormore  = readRDS(file = paste0(savingdir,'/','coord_plots_2ormore'))
+
+dim_reduce_obj_2ormore <- plot_dimReduc_coords(coord_plots_2ormore)
+dim_reduce_obj_2ormore$MDS_2d
+dim_reduce_obj_2ormore$nMDS_2d
+dim_reduce_obj_2ormore$TSNE_2d
+dim_reduce_obj_2ormore$umap_2d
+```
+
+```{r}
+dim(dframe2plus$ASV_composition)
+```
+We have 767 ASVs and 975 samples
+
+
+### Three or More
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+dframe3plus = tidy_grump(Dframe = dframe,vet_ASVs2remove = vetASVs_3orMore)
+
+if(!useStoredFiles){
+  aDist = vegan::vegdist(x = dframe3plus$ASV_composition %>% select(-name) %>% data.frame(),method = 'aitchison')
+  coord_plots_3ormore <- distMatrix_dimReduc_coords(distMatrix = as.matrix(aDist),perplexityTsne = 150)
+  saveRDS(coord_plots_3ormore,file = paste0(savingdir,'/','coord_plots_3ormore'))
+}
+
+coord_plots_3ormore  = readRDS(file = paste0(savingdir,'/','coord_plots_3ormore'))
+
+dim_reduce_obj_3ormore <- plot_dimReduc_coords(coord_plots_3ormore)
+
+dim_reduce_obj_3ormore$MDS_2d
+dim_reduce_obj_3ormore$nMDS_2d
+dim_reduce_obj_3ormore$TSNE_2d
+dim_reduce_obj_3ormore$umap_2d
+```
+
+```{r}
+dim(dframe3plus$ASV_composition)
+```
+
+598 ASVs and 970 samples.
+
+It feels that removing rare ASVs won't help..
+
+:::
+
+## Presence/Absence
+
+::: panel-tabset
+### All Asvs
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+if(!useStoredFiles){
+  hammDistMatrix = hammingDist(X = dframe_allASVs$binnary_ASV_df %>% select(-ASV_name) %>%  as.matrix())
+  coord_plots_all_bin <- distMatrix_dimReduc_coords(distMatrix = as.matrix(hammDistMatrix),perplexityTsne = 150)
+  saveRDS(coord_plots_all_bin,file = paste0(savingdir,'/','coord_plots_all_bin'))
+}
+
+coord_plots_all_bin  = readRDS(file = paste0(savingdir,'/','coord_plots_all_bin'))
+
+coord_plots_all_bin_plots <- plot_dimReduc_coords(coord_plots_all_bin)
+
+coord_plots_all_bin_plots$MDS_2d
+coord_plots_all_bin_plots$nMDS_2d
+coord_plots_all_bin_plots$TSNE_2d
+coord_plots_all_bin_plots$umap_2d
+```
+
+### Two or More
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+dframe2plus = tidy_grump(Dframe = dframe,vet_ASVs2remove = vetASVs_2orMore,binnary = T)
+
+if(!useStoredFiles){
+  hammDistMatrix = hammingDist(X = dframe2plus$binnary_ASV_df %>% select(-ASV_name) %>%  as.matrix())
+  coord_plots_2ormore_bin <- distMatrix_dimReduc_coords(distMatrix = as.matrix(hammDistMatrix),perplexityTsne = 150)
+  saveRDS(coord_plots_2ormore_bin,file = paste0(savingdir,'/','coord_plots_2ormore_bin'))
+}
+
+coord_plots_2ormore_bin  = readRDS(file = paste0(savingdir,'/','coord_plots_2ormore_bin'))
+
+coord_plots_2ormore_bin_plots <- plot_dimReduc_coords(coord_plots_2ormore_bin)
+
+coord_plots_2ormore_bin_plots$MDS_2d
+coord_plots_2ormore_bin_plots$nMDS_2d
+coord_plots_2ormore_bin_plots$TSNE_2d
+coord_plots_2ormore_bin_plots$umap_2d
+```
+We have 767 ASVs and 975 samples
+
+
+### Three or More
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+dframe3plus = tidy_grump(Dframe = dframe,vet_ASVs2remove = vetASVs_3orMore, binnary = T)
+
+if(!useStoredFiles){
+  hammDistMatrix = hammingDist(X = dframe3plus$binnary_ASV_df %>% select(-ASV_name) %>%  as.matrix())
+  coord_plots_3ormore_bin <- distMatrix_dimReduc_coords(distMatrix = as.matrix(hammDistMatrix),perplexityTsne = 150)
+  saveRDS(coord_plots_3ormore_bin,file = paste0(savingdir,'/','coord_plots_3ormore_bin'))
+}
+
+coord_plots_3ormore_bin  = readRDS(file = paste0(savingdir,'/','coord_plots_3ormore_bin'))
+
+coord_plots_3ormore_bin_plots <- plot_dimReduc_coords(coord_plots_2ormore_bin)
+
+coord_plots_3ormore_bin_plots$MDS_2d
+coord_plots_3ormore_bin_plots$nMDS_2d
+coord_plots_3ormore_bin_plots$TSNE_2d
+coord_plots_3ormore_bin_plots$umap_2d
+```
+598 ASVs and 971 samples.
+:::
+
+::: 
+
+# Idea
+
+Can we create a mixture of those tow distances and se if a pattern emerge?
+
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+
+if(!useStoredFiles){
+  hammDistMatrix = hammingDist(X = dframe_allASVs$binnary_ASV_df %>% select(-ASV_name) %>%  as.matrix())
+  aitDistMatrix = robCompositions::aDist(x = dframe_allASVs$ASV_composition %>% select(-name) %>% data.frame())
+  
+  fifty_fifty_matrix = 0.5 * normalizeDistMatrix(hammDistMatrix) + 0.5 * normalizeDistMatrix(aitDistMatrix)
+  coord_plots_mixed_All <- distMatrix_dimReduc_coords(distMatrix = as.matrix(hammDistMatrix),perplexityTsne = 150)
+  saveRDS(coord_plots_mixed_All,file = paste0(savingdir,'/','coord_plots_mixed_All'))
+}
+
+coord_plots_mixed_All  = readRDS(paste0(savingdir,'/','coord_plots_mixed_All'))
+
+coord_plots_mixed_All_plots <- plot_dimReduc_coords(coord_plots_2ormore_bin)
+
+coord_plots_mixed_All_plots$MDS_2d
+coord_plots_mixed_All_plots$nMDS_2d
+coord_plots_mixed_All_plots$TSNE_2d
+coord_plots_mixed_All_plots$umap_2d
+```
+Haven't compared it yet, but could be and Idea... 
+
+# Aggregating samples
+
+Here the idea is to aggregate some samples. So we would have compositions of ASVs but instead of samples we would have a less sparse and with less dimensions. The most natural could be:
+
+1.  Compositions of ASVs, under longhurst provinces
+2.  Compositions of ASVs, under longhurst provinces combined with different depths
+3.  Cruises?
+4.  Chunks of latitudes, and chunks of depths.
+
+So for each aggregation we should take a look at mds, tsne, umap of the ait distances (or distance matrix using the CLR transformation)
+
+So first lets do a bit of EDA to see what we can expect.
+
+::: panel-tabset
+
+## Distribution of Depth
+
+```{r}
+#| layout-ncol:  2 
+#| fig-height: 4
+dframe_allASVs$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>%  distinct() %>% 
+  ggplot(aes(Depth))+geom_histogram()
+
+dframe_allASVs$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>%  distinct() %>% 
+  ggplot(aes(Depth))+geom_boxplot()
+```
+
+Let's slice the dephts of the ocean in 10%. 
+
+```{r}
+distinct_depth <- dframe_allASVs$dframe %>% select(SampleKey,Depth) %>% distinct()
+qtls_0.1 = quantile(distinct_depth$Depth, seq(0,1,0.1))
+qtlsNames = 1:(length(qtls_0.1)-1)
+qtlsNames = ifelse(qtlsNames<10,paste0('DGR0',qtlsNames),paste0('DGR',qtlsNames))
+qtls_0.1
+```
+
+Here are the depth quantiles.
+
+```{r}
+distinct_depth = distinct_depth %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames))
+        
+distinct_depth %>% group_by(CatDepth) %>% 
+  summarise(Freq=n())
+```
+
+```{r}
+dframe_allASVs$dframe %>% select(SampleKey,Depth,Longhurst_Short) %>% distinct() %>% 
+  mutate(CatDepth=cut(Depth,breaks = qtls_0.1,include.lowest = T,right = T,labels = qtlsNames)) %>% 
+  ggplot(aes(CatDepth))+geom_bar()+
+  facet_wrap(~Longhurst_Short,scales='free_y')
+```
+This is the distribution of number of samples for each GDR (group depth rank for each longhurst province. 
+
+So our first tentative will be to create compositions of asvs with this amount of combinations (GDRxLH)
+
+## Analysing OceanSlices
+
+::: panel-tabset
+
+### Lat and Depth Slices
+
+::: panel-tabset
+
+#### Aitchison
+
+```{r}
+Lat_Depth_Composition_df=readRDS(file = paste0(savingdir,'/','Lat_Depth_Composition_df'))
+
+if(!useStoredFiles){
+  #hammDistMatrix = hammingDist(X = dframe_allASVs$binnary_ASV_df %>% select(-ASV_name) %>%  as.matrix())
+  aitDistMatrix = robCompositions::aDist(x = Lat_Depth_Composition_df %>% select(-name) %>% data.frame())
+  Lat_Depth_ait_all_coord <- distMatrix_dimReduc_coords(distMatrix = as.matrix(aitDistMatrix),perplexityTsne = 150)
+  saveRDS(Lat_Depth_ait_all_coord,file = paste0(savingdir,'/','Lat_Depth_ait_all_coord'))
+}
+
+Lat_Depth_ait_all_coord  = readRDS(file = paste0(savingdir,'/','Lat_Depth_ait_all_coord'))
+
+Lat_Depth_ait_all_coord_plots <- plot_dimReduc_coords(Lat_Depth_ait_all_coord)
+
+Lat_Depth_ait_all_coord_plots$MDS_2d
+Lat_Depth_ait_all_coord_plots$nMDS_2d
+Lat_Depth_ait_all_coord_plots$TSNE_2d
+Lat_Depth_ait_all_coord_plots$umap_2d
+```
+
+#### Binary
+
+:::
+
+### LH and Depth Slices
+
+::: panel-tabset
+
+#### Aitchison
+```{r}
+#| layout-ncol: 2
+#| layout-nrow: 2
+
+LH_Depth_Composition_df=readRDS(file = paste0(savingdir,'/','LH_Depth_Composition_df'))
+
+if(!useStoredFiles){
+  #hammDistMatrix = hammingDist(X = dframe_allASVs$binnary_ASV_df %>% select(-ASV_name) %>%  as.matrix())
+  aitDistMatrix = robCompositions::aDist(x = LH_Depth_Composition_df %>% select(-name) %>% data.frame())
+  LH_Depth_ait_all_coord <- distMatrix_dimReduc_coords(distMatrix = as.matrix(aitDistMatrix),perplexityTsne = 150)
+  saveRDS(LH_Depth_ait_all_coord,file = paste0(savingdir,'/','LH_Depth_ait_all_coord'))
+}
+
+LH_Depth_ait_all_coord  = readRDS(file = paste0(savingdir,'/','LH_Depth_ait_all_coord'))
+
+LH_Depth_ait_all_coord_plots <- plot_dimReduc_coords(LH_Depth_ait_all_coord)
+
+LH_Depth_ait_all_coord_plots$MDS_2d
+LH_Depth_ait_all_coord_plots$nMDS_2d
+LH_Depth_ait_all_coord_plots$TSNE_2d
+LH_Depth_ait_all_coord_plots$umap_2d
+```
+
+#### Binary
+
+:::
+
+:::
+
+:::
+
+
+#Creating Clusters
+
+Let's now create and evaluate the clusters using this two ocean slices that we have
+
+```{r}
+
+```
+
+
+
+:::
